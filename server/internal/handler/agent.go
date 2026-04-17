@@ -251,6 +251,7 @@ type CreateAgentRequest struct {
 	Instructions       string            `json:"instructions"`
 	AvatarURL          *string           `json:"avatar_url"`
 	RuntimeID          string            `json:"runtime_id"`
+	RuntimeMode        string            `json:"runtime_mode"`
 	RuntimeConfig      any               `json:"runtime_config"`
 	CustomEnv          map[string]string `json:"custom_env"`
 	CustomArgs         []string          `json:"custom_args"`
@@ -276,10 +277,6 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-	if req.RuntimeID == "" {
-		writeError(w, http.StatusBadRequest, "runtime_id is required")
-		return
-	}
 	if req.Visibility == "" {
 		req.Visibility = "private"
 	}
@@ -287,13 +284,39 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		req.MaxConcurrentTasks = 6
 	}
 
-	runtime, err := h.Queries.GetAgentRuntimeForWorkspace(r.Context(), db.GetAgentRuntimeForWorkspaceParams{
-		ID:          parseUUID(req.RuntimeID),
-		WorkspaceID: parseUUID(workspaceID),
-	})
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid runtime_id")
-		return
+	var runtimeMode string
+	var runtimeID pgtype.UUID
+
+	if req.RuntimeMode == "cloud" {
+		// Cloud agents don't need a runtime — they execute via Anthropic API
+		runtimeMode = "cloud"
+		// runtimeID stays zero-value (NULL)
+		if req.RuntimeID != "" {
+			// Optional: can still link to a runtime for hybrid mode
+			runtime, err := h.Queries.GetAgentRuntimeForWorkspace(r.Context(), db.GetAgentRuntimeForWorkspaceParams{
+				ID:          parseUUID(req.RuntimeID),
+				WorkspaceID: parseUUID(workspaceID),
+			})
+			if err == nil {
+				runtimeID = runtime.ID
+			}
+		}
+	} else {
+		// Non-cloud agents require a runtime
+		if req.RuntimeID == "" {
+			writeError(w, http.StatusBadRequest, "runtime_id is required")
+			return
+		}
+		runtime, err := h.Queries.GetAgentRuntimeForWorkspace(r.Context(), db.GetAgentRuntimeForWorkspaceParams{
+			ID:          parseUUID(req.RuntimeID),
+			WorkspaceID: parseUUID(workspaceID),
+		})
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid runtime_id")
+			return
+		}
+		runtimeMode = runtime.RuntimeMode
+		runtimeID = runtime.ID
 	}
 
 	rc, _ := json.Marshal(req.RuntimeConfig)
@@ -327,9 +350,9 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		Description:        req.Description,
 		Instructions:       req.Instructions,
 		AvatarUrl:          ptrToText(req.AvatarURL),
-		RuntimeMode:        runtime.RuntimeMode,
+		RuntimeMode:        runtimeMode,
 		RuntimeConfig:      rc,
-		RuntimeID:          runtime.ID,
+		RuntimeID:          runtimeID,
 		Visibility:         req.Visibility,
 		MaxConcurrentTasks: req.MaxConcurrentTasks,
 		OwnerID:            parseUUID(ownerID),
@@ -350,7 +373,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("agent created", append(logger.RequestAttrs(r), "agent_id", uuidToString(agent.ID), "name", agent.Name, "workspace_id", workspaceID)...)
 
-	if runtime.Status == "online" {
+	if runtimeID.Valid {
 		h.TaskService.ReconcileAgentStatus(r.Context(), agent.ID)
 		agent, _ = h.Queries.GetAgent(r.Context(), agent.ID)
 	}
