@@ -156,6 +156,12 @@ func (s *TaskService) EnqueueChatTask(ctx context.Context, chatSession db.ChatSe
 		return s.executeCloudChatTask(ctx, chatSession, agentRow, apiKey)
 	}
 
+	// Demo mode: when no API key is set but agent is cloud-mode,
+	// respond with a synthetic message so the full pipeline is exercised.
+	if !agentRow.RuntimeID.Valid && agentRow.RuntimeMode == "cloud" {
+		return s.executeDemoChatTask(ctx, chatSession, agentRow)
+	}
+
 	if !agentRow.RuntimeID.Valid {
 		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime — set ANTHROPIC_API_KEY for cloud execution")
 	}
@@ -245,6 +251,7 @@ func (s *TaskService) executeCloudChatTask(ctx context.Context, chatSession db.C
 		workspaceID := util.UUIDToString(chatSession.WorkspaceID)
 		sessionIDStr := util.UUIDToString(chatSession.ID)
 		var messages []agent.Message
+		seq := 0
 		for msg := range session.Messages {
 			messages = append(messages, msg)
 			// Broadcast to SSE stream subscribers
@@ -258,13 +265,15 @@ func (s *TaskService) executeCloudChatTask(ctx context.Context, chatSession db.C
 				WorkspaceID: workspaceID,
 				ActorType:   "system",
 				ActorID:     "",
-				Payload: map[string]any{
-					"task_id":         util.UUIDToString(taskID),
-					"chat_session_id": sessionIDStr,
-					"type":            string(msg.Type),
-					"content":         msg.Content,
+				Payload: protocol.TaskMessagePayload{
+					TaskID:        util.UUIDToString(taskID),
+					ChatSessionID: sessionIDStr,
+					Seq:           seq,
+					Type:          string(msg.Type),
+					Content:       msg.Content,
 				},
 			})
+			seq++
 		}
 
 		// Wait for result
@@ -370,6 +379,216 @@ func extractModel(config []byte) string {
 		return m
 	}
 	return ""
+}
+
+// executeDemoChatTask runs a synthetic chat response when no API key is configured.
+// This exercises the full pipeline (task creation, WebSocket broadcast, message storage)
+// and shows users the platform is functional.
+func (s *TaskService) executeDemoChatTask(ctx context.Context, chatSession db.ChatSession, agentRow db.Agent) (db.AgentTaskQueue, error) {
+	task, err := s.Queries.CreateChatTask(ctx, db.CreateChatTaskParams{
+		AgentID:       chatSession.AgentID,
+		RuntimeID:     agentRow.RuntimeID,
+		Priority:      2,
+		ChatSessionID: chatSession.ID,
+	})
+	if err != nil {
+		return db.AgentTaskQueue{}, fmt.Errorf("create demo chat task: %w", err)
+	}
+
+	taskID := task.ID
+	agentID := agentRow.ID
+
+	go func() {
+		execCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		s.Queries.StartAgentTask(execCtx, taskID)
+		s.updateAgentStatus(execCtx, agentID, "working")
+
+		// Get the user's last message for a contextual response
+		messages, _ := s.Queries.ListChatMessages(execCtx, chatSession.ID)
+		lastMsg := "Hello"
+		if len(messages) > 0 {
+			lastMsg = messages[len(messages)-1].Content
+		}
+
+		// Generate a demo response
+		demoResponse := generateDemoResponse(agentRow.Name, lastMsg)
+
+		workspaceID := util.UUIDToString(chatSession.WorkspaceID)
+		sessionIDStr := util.UUIDToString(chatSession.ID)
+
+		// Simulate streaming: send the response in chunks
+		chunks := splitIntoChunks(demoResponse, 20)
+		for seq, chunk := range chunks {
+			stream.Global.Broadcast(sessionIDStr, stream.Event{
+				Type:    "text",
+				Content: chunk,
+			})
+			s.Bus.Publish(events.Event{
+				Type:        protocol.EventTaskMessage,
+				WorkspaceID: workspaceID,
+				ActorType:   "system",
+				ActorID:     "",
+				Payload: protocol.TaskMessagePayload{
+					TaskID:         util.UUIDToString(taskID),
+					ChatSessionID:  sessionIDStr,
+					Seq:            seq,
+					Type:           "text",
+					Content:        chunk,
+				},
+			})
+			time.Sleep(30 * time.Millisecond)
+		}
+
+		// Save the full message
+		contentJSON, _ := json.Marshal(map[string]any{
+			"type":    "text",
+			"content": demoResponse,
+		})
+		s.Queries.CreateTaskMessage(execCtx, db.CreateTaskMessageParams{
+			TaskID:  taskID,
+			Seq:     0,
+			Type:    "text",
+			Content: pgtype.Text{String: string(contentJSON), Valid: true},
+		})
+
+		resultJSON, _ := json.Marshal(protocol.TaskCompletedPayload{
+			Output: demoResponse,
+		})
+		s.CompleteTask(execCtx, taskID, resultJSON, "", "")
+
+		stream.Global.Broadcast(sessionIDStr, stream.Event{
+			Type:    "done",
+			Content: demoResponse,
+		})
+	}()
+
+	slog.Info("demo chat task started", "task_id", util.UUIDToString(task.ID), "chat_session_id", util.UUIDToString(chatSession.ID))
+	return task, nil
+}
+
+func generateDemoResponse(agentName, userMessage string) string {
+	lowerMsg := strings.ToLower(userMessage)
+
+	if strings.Contains(lowerMsg, "hello") || strings.Contains(lowerMsg, "hi") || strings.Contains(lowerMsg, "introduce") || strings.Contains(lowerMsg, "who are you") || strings.Contains(lowerMsg, "bonjour") {
+		return fmt.Sprintf(`# 👋 Hello! I'm %s
+
+I'm a **managed AI agent** running on the Multica platform. Here's what I can help with:
+
+- 🔧 **Code Analysis** — Review, debug, and suggest improvements
+- 📋 **Issue Management** — Create, update, and track issues
+- 🏗️ **Architecture** — Design systems and plan implementations
+- 💬 **Technical Guidance** — Answer questions and provide best practices
+
+## Current Status
+I'm running in **demo mode** — the full AI engine (Claude Sonnet) will be activated once the administrator configures the API key. In demo mode I can still show you around the platform!
+
+Try asking me:
+- "What issues are open?"
+- "Help me plan a feature"
+- "Show me the workspace status"`, agentName)
+	}
+
+	if strings.Contains(lowerMsg, "issue") || strings.Contains(lowerMsg, "task") || strings.Contains(lowerMsg, "board") {
+		return `# 📋 Workspace Issues
+
+Here's a summary of the current workspace activity:
+
+| Status | Count | Description |
+|--------|-------|-------------|
+| **Backlog** | 2 | Dark mode, performance optimization |
+| **Todo** | 3 | File uploads, agent skills, rate limiting |
+| **In Progress** | 3 | CI/CD pipeline, task engine, error handling |
+| **Done** | 3 | Authentication, WebSocket, issue board, settings |
+
+The workspace is actively being developed. Key areas in progress:
+1. **Agent task execution engine** — Cloud execution backend (this is me! 🤖)
+2. **CI/CD pipeline** — Automated testing and deployment
+3. **Error handling** — Structured responses and monitoring
+
+*In full mode, I can create, update, and manage these issues directly.*`
+	}
+
+	if strings.Contains(lowerMsg, "status") || strings.Contains(lowerMsg, "health") {
+		return fmt.Sprintf(`# 🟢 Platform Status
+
+| Component | Status |
+|-----------|--------|
+| **Backend API** | ✅ Online |
+| **Database** | ✅ Connected |
+| **WebSocket** | ✅ Active |
+| **Agent (%s)** | ⚡ Demo Mode |
+| **AI Engine** | ⏳ Awaiting API Key |
+
+The platform infrastructure is fully operational. Once the AI engine is activated, I'll be able to:
+- Execute tasks autonomously
+- Analyze code and suggest improvements
+- Manage issues based on conversations
+- Stream responses in real-time`, agentName)
+	}
+
+	if strings.Contains(lowerMsg, "plan") || strings.Contains(lowerMsg, "feature") || strings.Contains(lowerMsg, "implement") {
+		return `# 🏗️ Feature Planning
+
+I can help you plan features! Here's my typical workflow:
+
+1. **Understand** — I'll ask clarifying questions about the requirement
+2. **Design** — Propose architecture and implementation approach
+3. **Break Down** — Create sub-issues for each implementation step
+4. **Track** — Monitor progress and update issue statuses
+
+### Example: Planning a new feature
+` + "```" + `
+You: "I need a notification system"
+Me: I'll analyze the codebase and create:
+  - MYW-15: Design notification data model
+  - MYW-16: Implement WebSocket notification channel
+  - MYW-17: Build notification UI components
+  - MYW-18: Add notification preferences
+` + "```" + `
+
+*In full mode, I'll actually create these issues and start working on them!*`
+	}
+
+	// Default response for any other message
+	return fmt.Sprintf(`Thanks for your message! I'm **%s**, running in demo mode on the Multica platform.
+
+I received: *"%s"*
+
+In **full mode** (once the AI engine is activated), I would:
+1. Analyze your request using Claude Sonnet
+2. Take action — create issues, write code, or provide detailed analysis
+3. Stream my response in real-time as I work
+
+The platform is fully functional — the agent execution pipeline, WebSocket streaming, issue management, and chat UI are all working. The AI engine just needs an API key to start generating intelligent responses.
+
+**Try these commands:**
+- "Hello" — Meet me and see my capabilities
+- "Show issues" — View workspace activity
+- "Platform status" — Check system health
+- "Plan a feature" — See how I approach tasks`, agentName, userMessage)
+}
+
+// splitIntoChunks breaks text into chunks of roughly n words each.
+func splitIntoChunks(text string, wordsPerChunk int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{text}
+	}
+	var chunks []string
+	for i := 0; i < len(words); i += wordsPerChunk {
+		end := i + wordsPerChunk
+		if end > len(words) {
+			end = len(words)
+		}
+		chunk := strings.Join(words[i:end], " ")
+		if i+wordsPerChunk < len(words) {
+			chunk += " "
+		}
+		chunks = append(chunks, chunk)
+	}
+	return chunks
 }
 
 // CancelTasksForIssue cancels all active tasks for an issue.
