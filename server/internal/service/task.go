@@ -225,8 +225,8 @@ func (s *TaskService) executeCloudChatTask(ctx context.Context, chatSession db.C
 		execCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 
-		// Mark task as running
-		s.Queries.StartAgentTask(execCtx, taskID)
+		// Mark task as running (direct transition from queued, bypassing dispatch)
+		s.forceTaskRunning(execCtx, taskID)
 		s.updateAgentStatus(execCtx, agentID, "working")
 
 		// Build prompt from chat history
@@ -402,7 +402,7 @@ func (s *TaskService) executeDemoChatTask(ctx context.Context, chatSession db.Ch
 		execCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		s.Queries.StartAgentTask(execCtx, taskID)
+		s.forceTaskRunning(execCtx, taskID)
 		s.updateAgentStatus(execCtx, agentID, "working")
 
 		// Get the user's last message for a contextual response
@@ -589,6 +589,14 @@ func splitIntoChunks(text string, wordsPerChunk int) []string {
 		chunks = append(chunks, chunk)
 	}
 	return chunks
+}
+
+// forceTaskRunning transitions a task directly from queued to running.
+// Used by cloud/demo execution which bypasses the normal dispatch flow.
+func (s *TaskService) forceTaskRunning(ctx context.Context, taskID pgtype.UUID) {
+	if err := s.Queries.ForceTaskRunning(ctx, taskID); err != nil {
+		slog.Warn("forceTaskRunning failed", "task_id", util.UUIDToString(taskID), "error", err)
+	}
 }
 
 // CancelTasksForIssue cancels all active tasks for an issue.
