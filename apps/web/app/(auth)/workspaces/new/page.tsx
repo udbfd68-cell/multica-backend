@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@multica/core/auth";
 import { paths } from "@multica/core/paths";
@@ -17,9 +16,7 @@ export default function Page() {
     enabled: !!user,
   });
 
-  useEffect(() => {
-    if (!isLoading && !user) router.replace(paths.login());
-  }, [isLoading, user, router]);
+  // Wait for auth to resolve — auto-token will kick in if configured.
 
   if (isLoading || !user) return null;
 

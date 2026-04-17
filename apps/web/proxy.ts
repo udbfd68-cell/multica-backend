@@ -29,11 +29,6 @@ export function proxy(req: NextRequest) {
   if (LEGACY_ROUTE_SEGMENTS.has(firstSegment)) {
     const url = req.nextUrl.clone();
 
-    if (!hasSession) {
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
-
     if (lastSlug) {
       // Preserve deep-link path + query: /issues/abc → /{lastSlug}/issues/abc
       url.pathname = `/${lastSlug}${pathname}`;
