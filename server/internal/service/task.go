@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
+	"time"
 
 	"strconv"
 
@@ -14,7 +17,9 @@ import (
 	"github.com/multica-ai/multica/server/internal/events"
 	"github.com/multica-ai/multica/server/internal/mention"
 	"github.com/multica-ai/multica/server/internal/realtime"
+	"github.com/multica-ai/multica/server/internal/stream"
 	"github.com/multica-ai/multica/server/internal/util"
+	"github.com/multica-ai/multica/server/pkg/agent"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
 	"github.com/multica-ai/multica/server/pkg/redact"
@@ -131,31 +136,51 @@ func (s *TaskService) EnqueueTaskForMention(ctx context.Context, issue db.Issue,
 
 // EnqueueChatTask creates a queued task for a chat session.
 // Unlike issue tasks, chat tasks have no issue_id.
+// If the agent uses cloud runtime mode, the task is executed directly
+// via the Anthropic API without requiring a daemon.
 func (s *TaskService) EnqueueChatTask(ctx context.Context, chatSession db.ChatSession) (db.AgentTaskQueue, error) {
-	agent, err := s.Queries.GetAgent(ctx, chatSession.AgentID)
+	agentRow, err := s.Queries.GetAgent(ctx, chatSession.AgentID)
 	if err != nil {
 		slog.Error("chat task enqueue failed", "chat_session_id", util.UUIDToString(chatSession.ID), "error", err)
 		return db.AgentTaskQueue{}, fmt.Errorf("load agent: %w", err)
 	}
-	if agent.ArchivedAt.Valid {
+	if agentRow.ArchivedAt.Valid {
 		return db.AgentTaskQueue{}, fmt.Errorf("agent is archived")
 	}
-	if !agent.RuntimeID.Valid {
-		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime")
+
+	// Cloud execution: when we have an API key, execute directly on the server
+	// without requiring a daemon — either for cloud-mode agents or as fallback
+	// when the daemon runtime is offline.
+	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	if apiKey != "" && (agentRow.RuntimeMode == "cloud" || !agentRow.RuntimeID.Valid) {
+		return s.executeCloudChatTask(ctx, chatSession, agentRow, apiKey)
+	}
+
+	if !agentRow.RuntimeID.Valid {
+		return db.AgentTaskQueue{}, fmt.Errorf("agent has no runtime — set ANTHROPIC_API_KEY for cloud execution")
 	}
 
 	// Check runtime is online before enqueuing
-	runtime, err := s.Queries.GetAgentRuntime(ctx, agent.RuntimeID)
+	runtime, err := s.Queries.GetAgentRuntime(ctx, agentRow.RuntimeID)
 	if err != nil {
 		return db.AgentTaskQueue{}, fmt.Errorf("load runtime: %w", err)
 	}
+
+	// If runtime is offline but we have an API key, fall back to cloud execution
+	if runtime.Status == "offline" && apiKey != "" {
+		slog.Info("runtime offline, falling back to cloud execution",
+			"agent_id", util.UUIDToString(agentRow.ID),
+			"runtime_id", util.UUIDToString(agentRow.RuntimeID))
+		return s.executeCloudChatTask(ctx, chatSession, agentRow, apiKey)
+	}
+
 	if runtime.Status == "offline" {
 		return db.AgentTaskQueue{}, fmt.Errorf("runtime %q is offline — start the daemon first", runtime.Name)
 	}
 
 	task, err := s.Queries.CreateChatTask(ctx, db.CreateChatTaskParams{
 		AgentID:       chatSession.AgentID,
-		RuntimeID:     agent.RuntimeID,
+		RuntimeID:     agentRow.RuntimeID,
 		Priority:      2, // medium priority for chat
 		ChatSessionID: chatSession.ID,
 	})
@@ -166,6 +191,185 @@ func (s *TaskService) EnqueueChatTask(ctx context.Context, chatSession db.ChatSe
 
 	slog.Info("chat task enqueued", "task_id", util.UUIDToString(task.ID), "chat_session_id", util.UUIDToString(chatSession.ID), "agent_id", util.UUIDToString(chatSession.AgentID))
 	return task, nil
+}
+
+// executeCloudChatTask runs a chat task directly on the server using the Anthropic API.
+// This is the "managed agent" path — no daemon or CLI required.
+func (s *TaskService) executeCloudChatTask(ctx context.Context, chatSession db.ChatSession, agentRow db.Agent, apiKey string) (db.AgentTaskQueue, error) {
+	if apiKey == "" {
+		return db.AgentTaskQueue{}, fmt.Errorf("cloud execution requires ANTHROPIC_API_KEY")
+	}
+
+	// Create the task in the DB so we can track it
+	task, err := s.Queries.CreateChatTask(ctx, db.CreateChatTaskParams{
+		AgentID:       chatSession.AgentID,
+		RuntimeID:     agentRow.RuntimeID,
+		Priority:      2,
+		ChatSessionID: chatSession.ID,
+	})
+	if err != nil {
+		return db.AgentTaskQueue{}, fmt.Errorf("create cloud chat task: %w", err)
+	}
+
+	taskID := task.ID
+	agentID := agentRow.ID
+
+	// Execute asynchronously — return the task immediately, process in background
+	go func() {
+		execCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+
+		// Mark task as running
+		s.Queries.StartAgentTask(execCtx, taskID)
+		s.updateAgentStatus(execCtx, agentID, "working")
+
+		// Build prompt from chat history
+		prompt, systemPrompt := s.buildChatPrompt(execCtx, chatSession, agentRow)
+
+		// Determine model from runtime_config
+		model := extractModel(agentRow.RuntimeConfig)
+
+		backend := agent.NewCloudClaude(apiKey, slog.Default())
+		session, err := backend.Execute(execCtx, prompt, agent.ExecOptions{
+			Model:        model,
+			SystemPrompt: systemPrompt,
+			Timeout:      10 * time.Minute,
+		})
+		if err != nil {
+			slog.Error("cloud task execution failed", "task_id", util.UUIDToString(taskID), "error", err)
+			s.FailTask(execCtx, taskID, err.Error())
+			return
+		}
+
+		// Drain messages (broadcast streaming events)
+		workspaceID := util.UUIDToString(chatSession.WorkspaceID)
+		sessionIDStr := util.UUIDToString(chatSession.ID)
+		var messages []agent.Message
+		for msg := range session.Messages {
+			messages = append(messages, msg)
+			// Broadcast to SSE stream subscribers
+			stream.Global.Broadcast(sessionIDStr, stream.Event{
+				Type:    string(msg.Type),
+				Content: msg.Content,
+			})
+			// Also broadcast via event bus for WebSocket clients
+			s.Bus.Publish(events.Event{
+				Type:        protocol.EventTaskMessage,
+				WorkspaceID: workspaceID,
+				ActorType:   "system",
+				ActorID:     "",
+				Payload: map[string]any{
+					"task_id":         util.UUIDToString(taskID),
+					"chat_session_id": sessionIDStr,
+					"type":            string(msg.Type),
+					"content":         msg.Content,
+				},
+			})
+		}
+
+		// Wait for result
+		result := <-session.Result
+
+		// Save messages to DB for task transcript
+		for seq, msg := range messages {
+			if msg.Content == "" && msg.Tool == "" {
+				continue
+			}
+			contentJSON, _ := json.Marshal(map[string]any{
+				"type":    string(msg.Type),
+				"content": msg.Content,
+			})
+			var inputJSON []byte
+			if msg.Input != nil {
+				inputJSON, _ = json.Marshal(msg.Input)
+			}
+			s.Queries.CreateTaskMessage(execCtx, db.CreateTaskMessageParams{
+				TaskID:  taskID,
+				Seq:     int32(seq),
+				Type:    string(msg.Type),
+				Tool:    pgtype.Text{String: msg.Tool, Valid: msg.Tool != ""},
+				Content: pgtype.Text{String: string(contentJSON), Valid: true},
+				Input:   inputJSON,
+				Output:  pgtype.Text{String: msg.Output, Valid: msg.Output != ""},
+			})
+		}
+
+		// Report usage
+		for modelName, usage := range result.Usage {
+			s.Queries.UpsertTaskUsage(execCtx, db.UpsertTaskUsageParams{
+				TaskID:           taskID,
+				Provider:         "anthropic",
+				Model:            modelName,
+				InputTokens:      usage.InputTokens,
+				OutputTokens:     usage.OutputTokens,
+				CacheReadTokens:  usage.CacheReadTokens,
+				CacheWriteTokens: usage.CacheWriteTokens,
+			})
+		}
+
+		// Complete the task
+		resultJSON, _ := json.Marshal(protocol.TaskCompletedPayload{
+			Output: result.Output,
+		})
+		s.CompleteTask(execCtx, taskID, resultJSON, "", "")
+
+		// Signal SSE stream completion
+		stream.Global.Broadcast(sessionIDStr, stream.Event{
+			Type:    "done",
+			Content: result.Output,
+		})
+	}()
+
+	slog.Info("cloud chat task started", "task_id", util.UUIDToString(task.ID), "chat_session_id", util.UUIDToString(chatSession.ID))
+	return task, nil
+}
+
+// buildChatPrompt constructs the prompt for a cloud chat task from chat history.
+func (s *TaskService) buildChatPrompt(ctx context.Context, chatSession db.ChatSession, agentRow db.Agent) (string, string) {
+	// Build system prompt from agent instructions
+	systemPrompt := agentRow.Instructions
+	if systemPrompt == "" {
+		systemPrompt = fmt.Sprintf("You are %s, a managed AI agent on the Multica platform. %s\n\nYou are helpful, direct, and take action when possible. Use markdown for code and structured output.", agentRow.Name, agentRow.Description)
+	}
+
+	// Get recent chat messages for context
+	messages, err := s.Queries.ListChatMessages(ctx, chatSession.ID)
+	if err != nil || len(messages) == 0 {
+		return "Hello", systemPrompt
+	}
+
+	// Build conversation as a single prompt (the cloud backend sends it as one user message)
+	var prompt strings.Builder
+	for i, m := range messages {
+		if i > 0 {
+			prompt.WriteString("\n\n")
+		}
+		switch m.Role {
+		case "user":
+			prompt.WriteString("[User]: ")
+			prompt.WriteString(m.Content)
+		case "assistant":
+			prompt.WriteString("[Assistant]: ")
+			prompt.WriteString(m.Content)
+		}
+	}
+
+	return prompt.String(), systemPrompt
+}
+
+// extractModel pulls the model name from agent runtime_config JSON.
+func extractModel(config []byte) string {
+	if config == nil {
+		return ""
+	}
+	var rc map[string]any
+	if err := json.Unmarshal(config, &rc); err != nil {
+		return ""
+	}
+	if m, ok := rc["model"].(string); ok {
+		return m
+	}
+	return ""
 }
 
 // CancelTasksForIssue cancels all active tasks for an issue.

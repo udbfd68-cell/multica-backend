@@ -359,6 +359,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 					r.Get("/messages", h.ListChatMessages)
 					r.Get("/pending-task", h.GetPendingChatTask)
 					r.Post("/read", h.MarkChatSessionRead)
+					r.Get("/stream", h.StreamChatMessages)
 				})
 			})
 			r.Get("/api/chat/pending-tasks", h.ListPendingChatTasks)

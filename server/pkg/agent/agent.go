@@ -89,7 +89,7 @@ type Config struct {
 }
 
 // New creates a Backend for the given agent type.
-// Supported types: "claude", "codex", "copilot", "opencode", "openclaw", "hermes", "gemini", "pi", "cursor".
+// Supported types: "claude", "cloud-claude", "codex", "copilot", "opencode", "openclaw", "hermes", "gemini", "pi", "cursor".
 func New(agentType string, cfg Config) (Backend, error) {
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -98,6 +98,12 @@ func New(agentType string, cfg Config) (Backend, error) {
 	switch agentType {
 	case "claude":
 		return &claudeBackend{cfg: cfg}, nil
+	case "cloud-claude":
+		apiKey := cfg.Env["ANTHROPIC_API_KEY"]
+		if apiKey == "" {
+			return nil, fmt.Errorf("cloud-claude requires ANTHROPIC_API_KEY in env")
+		}
+		return NewCloudClaude(apiKey, cfg.Logger), nil
 	case "codex":
 		return &codexBackend{cfg: cfg}, nil
 	case "copilot":
@@ -115,7 +121,7 @@ func New(agentType string, cfg Config) (Backend, error) {
 	case "cursor":
 		return &cursorBackend{cfg: cfg}, nil
 	default:
-		return nil, fmt.Errorf("unknown agent type: %q (supported: claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor)", agentType)
+		return nil, fmt.Errorf("unknown agent type: %q (supported: claude, cloud-claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor)", agentType)
 	}
 }
 
