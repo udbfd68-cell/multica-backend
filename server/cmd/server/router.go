@@ -371,6 +371,8 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Route("/{agentId}", func(r chi.Router) {
 					r.Get("/", h.GetManagedAgent)
 					r.Put("/", h.UpdateManagedAgent)
+					r.Post("/", h.UpdateManagedAgent)
+					r.Delete("/", h.DeleteManagedAgent)
 					r.Post("/archive", h.ArchiveManagedAgent)
 					r.Get("/versions", h.ListManagedAgentVersions)
 					// MCP connectors per agent
@@ -394,6 +396,8 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Post("/", h.CreateEnvironment)
 				r.Route("/{envId}", func(r chi.Router) {
 					r.Get("/", h.GetEnvironment)
+					r.Put("/", h.UpdateEnvironment)
+					r.Post("/", h.UpdateEnvironment)
 					r.Post("/archive", h.ArchiveEnvironment)
 					r.Delete("/", h.DeleteEnvironment)
 				})

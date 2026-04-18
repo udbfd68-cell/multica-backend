@@ -9,7 +9,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -69,18 +71,22 @@ func (e *Executor) Execute(ctx context.Context, toolName, callID string, input m
 		output, isError = e.execUpdateIssue(ctx, input)
 	case "add_comment":
 		output, isError = e.execAddComment(ctx, input)
-	case "search_code":
+	case "search_code", "grep":
 		output, isError = e.execSearchCode(ctx, input)
-	case "read_file":
+	case "read_file", "read":
 		output, isError = e.execReadFile(ctx, input)
-	case "write_file":
+	case "write_file", "write":
 		output, isError = e.execWriteFile(ctx, input)
-	case "list_directory":
+	case "edit":
+		output, isError = e.execEditFile(ctx, input)
+	case "list_directory", "glob":
 		output, isError = e.execListDirectory(ctx, input)
 	case "send_email":
 		output, isError = e.execSendEmail(ctx, input)
-	case "http_request":
+	case "http_request", "web_fetch":
 		output, isError = e.execHTTPRequest(ctx, input)
+	case "web_search":
+		output, isError = e.execWebSearch(ctx, input)
 	case "memory_read":
 		output, isError = e.execMemoryRead(ctx, input)
 	case "memory_write":
@@ -461,6 +467,89 @@ func (e *Executor) execWriteFile(_ context.Context, input map[string]any) (strin
 	}
 
 	return fmt.Sprintf("File written: %s (%d bytes)", path, len(content)), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: edit (Anthropic-compatible file edit with old_string/new_string)
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execEditFile(_ context.Context, input map[string]any) (string, bool) {
+	path, _ := input["path"].(string)
+	oldStr, _ := input["old_string"].(string)
+	newStr, _ := input["new_string"].(string)
+	if path == "" {
+		return "path is required", true
+	}
+	if strings.Contains(path, "..") {
+		return "path traversal not allowed", true
+	}
+
+	fullPath := path
+	if !strings.HasPrefix(path, "/") {
+		fullPath = e.WorkDir + "/" + path
+	}
+
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "failed to read file: " + err.Error(), true
+	}
+
+	content := string(data)
+	if oldStr == "" {
+		// Create new file with new_string content
+		if err := os.WriteFile(fullPath, []byte(newStr), 0o644); err != nil {
+			return "failed to write file: " + err.Error(), true
+		}
+		return fmt.Sprintf("File created: %s (%d bytes)", path, len(newStr)), false
+	}
+
+	count := strings.Count(content, oldStr)
+	if count == 0 {
+		return "old_string not found in file", true
+	}
+	if count > 1 {
+		return fmt.Sprintf("old_string found %d times, must be unique", count), true
+	}
+
+	content = strings.Replace(content, oldStr, newStr, 1)
+	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+		return "failed to write file: " + err.Error(), true
+	}
+
+	return fmt.Sprintf("File edited: %s", path), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: web_search (basic web search via DuckDuckGo HTML)
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execWebSearch(ctx context.Context, input map[string]any) (string, bool) {
+	query, _ := input["query"].(string)
+	if query == "" {
+		return "query is required", true
+	}
+
+	// Use DuckDuckGo lite as a simple search backend
+	searchURL := "https://lite.duckduckgo.com/lite/?q=" + strings.ReplaceAll(query, " ", "+")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
+	if err != nil {
+		return "failed to create request: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Multica-Agent/1.0")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "search request failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 100*1024))
+	if err != nil {
+		return "failed to read response: " + err.Error(), true
+	}
+
+	return fmt.Sprintf("Search results for '%s':\n%s", query, string(body)), false
 }
 
 // ---------------------------------------------------------------------------

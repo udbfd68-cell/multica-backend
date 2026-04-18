@@ -520,7 +520,7 @@ func AllTools() []anthropicTool {
 	extra := []anthropicTool{
 		{
 			Name:        "bash",
-			Description: "Execute a shell command in a sandboxed environment. Use for running scripts, installing packages, or any system operation.",
+			Description: "Execute a shell command. Use for running scripts, installing packages, or any system operation.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -531,7 +531,7 @@ func AllTools() []anthropicTool {
 			},
 		},
 		{
-			Name:        "read_file",
+			Name:        "read",
 			Description: "Read the contents of a file at the given path.",
 			InputSchema: map[string]any{
 				"type": "object",
@@ -542,7 +542,7 @@ func AllTools() []anthropicTool {
 			},
 		},
 		{
-			Name:        "write_file",
+			Name:        "write",
 			Description: "Write content to a file, creating it if it doesn't exist.",
 			InputSchema: map[string]any{
 				"type": "object",
@@ -554,40 +554,63 @@ func AllTools() []anthropicTool {
 			},
 		},
 		{
-			Name:        "list_directory",
-			Description: "List files and directories at the given path.",
+			Name:        "edit",
+			Description: "Edit a file by replacing an exact string occurrence with new content.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"path": map[string]any{"type": "string", "description": "Directory path to list (default: current directory)"},
+					"path":       map[string]any{"type": "string", "description": "File path to edit"},
+					"old_string": map[string]any{"type": "string", "description": "The exact string to find and replace (must appear exactly once)"},
+					"new_string": map[string]any{"type": "string", "description": "The replacement string"},
+				},
+				"required": []string{"path", "old_string", "new_string"},
+			},
+		},
+		{
+			Name:        "glob",
+			Description: "List files and directories matching a path or glob pattern.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"path": map[string]any{"type": "string", "description": "Directory path or glob pattern (default: current directory)"},
 				},
 			},
 		},
 		{
-			Name:        "send_email",
-			Description: "Send an email notification.",
+			Name:        "grep",
+			Description: "Search for text patterns in files. Supports regex.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"to":      map[string]any{"type": "string", "description": "Recipient email address"},
-					"subject": map[string]any{"type": "string", "description": "Email subject"},
-					"body":    map[string]any{"type": "string", "description": "Email body (supports markdown)"},
+					"query": map[string]any{"type": "string", "description": "Search query (supports regex)"},
+					"path":  map[string]any{"type": "string", "description": "Optional path filter (e.g., 'src/**/*.ts')"},
 				},
-				"required": []string{"to", "subject", "body"},
+				"required": []string{"query"},
 			},
 		},
 		{
-			Name:        "http_request",
-			Description: "Make an HTTP request to an external URL. Only GET and POST are allowed. Internal network addresses are blocked.",
+			Name:        "web_fetch",
+			Description: "Fetch the content of a URL. Only GET and POST are allowed. Internal network addresses are blocked.",
 			InputSchema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"url":     map[string]any{"type": "string", "description": "The URL to request"},
+					"url":     map[string]any{"type": "string", "description": "The URL to fetch"},
 					"method":  map[string]any{"type": "string", "enum": []string{"GET", "POST"}, "description": "HTTP method (default: GET)"},
 					"headers": map[string]any{"type": "object", "description": "Optional HTTP headers"},
 					"body":    map[string]any{"type": "string", "description": "Request body for POST requests"},
 				},
 				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "web_search",
+			Description: "Search the web for information.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"query": map[string]any{"type": "string", "description": "Search query"},
+				},
+				"required": []string{"query"},
 			},
 		},
 		{

@@ -41,6 +41,9 @@ UPDATE managed_agent SET archived_at = now() WHERE id = $1;
 -- name: RestoreManagedAgent :exec
 UPDATE managed_agent SET archived_at = NULL WHERE id = $1;
 
+-- name: DeleteManagedAgent :exec
+DELETE FROM managed_agent WHERE id = $1;
+
 -- name: CreateManagedAgentVersion :one
 INSERT INTO managed_agent_version (agent_id, version, snapshot)
 VALUES ($1, $2, $3)

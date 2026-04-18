@@ -24,6 +24,76 @@ import (
 // ctxWorkspaceID is also defined there.
 
 // ---------------------------------------------------------------------------
+// Agent Delete
+// ---------------------------------------------------------------------------
+
+func (h *Handler) DeleteManagedAgent(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+	agentID := chi.URLParam(r, "agentId")
+
+	if _, err := h.Queries.GetManagedAgentInWorkspace(r.Context(), db.GetManagedAgentInWorkspaceParams{
+		ID:          parseUUID(agentID),
+		WorkspaceID: parseUUID(workspaceID),
+	}); err != nil {
+		writeError(w, http.StatusNotFound, "agent not found")
+		return
+	}
+
+	if err := h.Queries.DeleteManagedAgent(r.Context(), parseUUID(agentID)); err != nil {
+		writeError(w, http.StatusConflict, "agent has active sessions, archive instead")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---------------------------------------------------------------------------
+// Environment Update
+// ---------------------------------------------------------------------------
+
+func (h *Handler) UpdateEnvironment(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+	envID := chi.URLParam(r, "envId")
+
+	if _, err := h.Queries.GetEnvironmentInWorkspace(r.Context(), db.GetEnvironmentInWorkspaceParams{
+		ID:          parseUUID(envID),
+		WorkspaceID: parseUUID(workspaceID),
+	}); err != nil {
+		writeError(w, http.StatusNotFound, "environment not found")
+		return
+	}
+
+	var req struct {
+		Name   *string         `json:"name"`
+		Config json.RawMessage `json:"config"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	params := db.UpdateEnvironmentParams{ID: parseUUID(envID)}
+	if req.Name != nil {
+		params.Name = *req.Name
+	}
+	if req.Config != nil {
+		params.Config = req.Config
+	}
+
+	env, err := h.Queries.UpdateEnvironment(r.Context(), params)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update environment")
+		return
+	}
+	writeJSON(w, http.StatusOK, environmentToResponse(env))
+}
+
+// ---------------------------------------------------------------------------
 // Environment Delete
 // ---------------------------------------------------------------------------
 
@@ -148,13 +218,29 @@ func (h *Handler) SendSessionEvents(w http.ResponseWriter, r *http.Request) {
 			Content: string(raw),
 		})
 
-		// Handle state transitions
+		// Handle state transitions and trigger execution
 		switch evt.Type {
 		case "user.message":
 			h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
 				ID:     session.ID,
 				Status: "running",
 			})
+			// Extract message content and trigger agentic execution
+			var msgContent struct {
+				Content string `json:"content"`
+			}
+			json.Unmarshal(raw, &msgContent)
+			if msgContent.Content != "" {
+				agent, err := h.Queries.GetManagedAgentInWorkspace(r.Context(), db.GetManagedAgentInWorkspaceParams{
+					ID:          session.AgentID,
+					WorkspaceID: parseUUID(workspaceID),
+				})
+				if err == nil {
+					if execErr := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, msgContent.Content); execErr != nil {
+						slog.Error("failed to execute session on user.message", "error", execErr)
+					}
+				}
+			}
 		case "user.interrupt":
 			h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
 				ID:     session.ID,

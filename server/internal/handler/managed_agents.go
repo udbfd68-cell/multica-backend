@@ -467,17 +467,18 @@ func (h *Handler) ArchiveEnvironment(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 type ManagedSessionResponse struct {
-	ID           string          `json:"id"`
-	AgentID      string          `json:"agent_id"`
-	AgentVersion int32           `json:"agent_version"`
-	Status       string          `json:"status"`
-	VaultIds     []string        `json:"vault_ids"`
-	Resources    json.RawMessage `json:"resources"`
-	Usage        SessionUsage    `json:"usage"`
-	Title        *string         `json:"title,omitempty"`
-	StopReason   json.RawMessage `json:"stop_reason,omitempty"`
-	CreatedAt    string          `json:"created_at"`
-	UpdatedAt    string          `json:"updated_at"`
+	ID            string          `json:"id"`
+	AgentID       string          `json:"agent_id"`
+	AgentVersion  int32           `json:"agent_version"`
+	EnvironmentID *string         `json:"environment_id,omitempty"`
+	Status        string          `json:"status"`
+	VaultIds      []string        `json:"vault_ids"`
+	Resources     json.RawMessage `json:"resources"`
+	Usage         SessionUsage    `json:"usage"`
+	Title         *string         `json:"title,omitempty"`
+	StopReason    json.RawMessage `json:"stop_reason,omitempty"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
 }
 
 type SessionUsage struct {
@@ -496,12 +497,12 @@ func managedSessionToResponse(s db.ManagedSession) ManagedSessionResponse {
 	}
 
 	resp := ManagedSessionResponse{
-		ID:           uuidToString(s.ID),
-		AgentID:      uuidToString(s.AgentID),
-		AgentVersion: s.AgentVersion,
-		Status:       s.Status,
-		VaultIds:     vaultIDs,
-		Resources:    s.Resources,
+		ID:            uuidToString(s.ID),
+		AgentID:       uuidToString(s.AgentID),
+		AgentVersion:  s.AgentVersion,
+		Status:        s.Status,
+		VaultIds:      vaultIDs,
+		Resources:     s.Resources,
 		Usage: SessionUsage{
 			InputTokens:         s.UsageInputTokens,
 			OutputTokens:        s.UsageOutputTokens,
@@ -514,6 +515,10 @@ func managedSessionToResponse(s db.ManagedSession) ManagedSessionResponse {
 	if s.Title.Valid {
 		resp.Title = &s.Title.String
 	}
+	if s.EnvironmentID.Valid {
+		eid := uuidToString(s.EnvironmentID)
+		resp.EnvironmentID = &eid
+	}
 	if len(s.StopReason) > 0 {
 		resp.StopReason = s.StopReason
 	}
@@ -525,7 +530,7 @@ type CreateManagedSessionRequest struct {
 	EnvironmentID *string  `json:"environment_id,omitempty"`
 	VaultIds      []string `json:"vault_ids,omitempty"`
 	Title         *string  `json:"title,omitempty"`
-	Prompt        string   `json:"prompt"`
+	Prompt        string   `json:"prompt,omitempty"`
 }
 
 func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
@@ -541,10 +546,6 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.AgentID == "" {
 		writeError(w, http.StatusBadRequest, "agent_id is required")
-		return
-	}
-	if req.Prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
 
@@ -588,15 +589,25 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Launch agentic execution asynchronously
-	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
-		slog.Error("failed to start session execution", "error", err, "session_id", uuidToString(session.ID))
-		// Session is created but execution failed to start — update status
-		h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
-			ID:     session.ID,
-			Status: "failed",
+	// If prompt is provided, auto-start execution (backward compat).
+	// Otherwise, session starts idle — drive it via POST /events with user.message.
+	if req.Prompt != "" {
+		// Record the user message event
+		payload, _ := json.Marshal(map[string]string{"type": "user.message", "content": req.Prompt})
+		h.Queries.CreateSessionEvent(r.Context(), db.CreateSessionEventParams{
+			SessionID: session.ID,
+			Type:      "user.message",
+			Payload:   payload,
 		})
-		session.Status = "failed"
+
+		if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
+			slog.Error("failed to start session execution", "error", err, "session_id", uuidToString(session.ID))
+			h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
+				ID:     session.ID,
+				Status: "terminated",
+			})
+			session.Status = "terminated"
+		}
 	}
 
 	writeJSON(w, http.StatusCreated, managedSessionToResponse(session))

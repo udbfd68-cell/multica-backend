@@ -62,7 +62,7 @@ func (s *ManagedSessionService) ExecuteSession(
 	workspaceIDStr := util.UUIDToString(session.WorkspaceID)
 
 	// Broadcast session started
-	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.started", map[string]string{
+	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.status_running", map[string]string{
 		"agent_name": agentRow.Name,
 		"status":     "running",
 	})
@@ -162,10 +162,10 @@ func (s *ManagedSessionService) drainAndStream(
 	// Wait for final result
 	result := <-agentSession.Result
 
-	// Update session status
-	finalStatus := "completed"
+	// Update session status — Anthropic uses idle (success) or terminated (error)
+	finalStatus := "idle"
 	if result.Status == "failed" || result.Status == "aborted" {
-		finalStatus = "failed"
+		finalStatus = "terminated"
 	}
 
 	s.Queries.UpdateManagedSessionStatus(ctx, db.UpdateManagedSessionStatusParams{
@@ -198,7 +198,7 @@ func (s *ManagedSessionService) drainAndStream(
 		Content: result.Output,
 	})
 
-	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.completed", map[string]any{
+	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.status_idle", map[string]any{
 		"status":      finalStatus,
 		"duration_ms": result.DurationMs,
 		"output":      truncateForBroadcast(result.Output),
@@ -227,11 +227,11 @@ func (s *ManagedSessionService) drainAndStream(
 func (s *ManagedSessionService) failSession(ctx context.Context, sessionID pgtype.UUID, workspaceIDStr, sessionIDStr, errMsg string) {
 	s.Queries.UpdateManagedSessionStatus(ctx, db.UpdateManagedSessionStatusParams{
 		ID:     sessionID,
-		Status: "failed",
+		Status: "terminated",
 	})
 
 	stopReason, _ := json.Marshal(map[string]any{
-		"status": "failed",
+		"status": "terminated",
 		"error":  errMsg,
 	})
 	s.Queries.SetManagedSessionStopReason(ctx, sessionID, stopReason)
@@ -241,7 +241,7 @@ func (s *ManagedSessionService) failSession(ctx context.Context, sessionID pgtyp
 		Content: errMsg,
 	})
 
-	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.failed", map[string]any{
+	s.broadcastEvent(workspaceIDStr, sessionIDStr, "session.status_terminated", map[string]any{
 		"error": errMsg,
 	})
 }

@@ -194,6 +194,15 @@ func (q *Queries) RestoreManagedAgent(ctx context.Context, id pgtype.UUID) error
 	return err
 }
 
+const deleteManagedAgent = `-- name: DeleteManagedAgent :exec
+DELETE FROM managed_agent WHERE id = $1
+`
+
+func (q *Queries) DeleteManagedAgent(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteManagedAgent, id)
+	return err
+}
+
 const createManagedAgentVersion = `-- name: CreateManagedAgentVersion :one
 INSERT INTO managed_agent_version (agent_id, version, snapshot)
 VALUES ($1, $2, $3)
