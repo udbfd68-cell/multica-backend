@@ -525,6 +525,7 @@ type CreateManagedSessionRequest struct {
 	EnvironmentID *string  `json:"environment_id,omitempty"`
 	VaultIds      []string `json:"vault_ids,omitempty"`
 	Title         *string  `json:"title,omitempty"`
+	Prompt        string   `json:"prompt"`
 }
 
 func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
@@ -540,6 +541,10 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.AgentID == "" {
 		writeError(w, http.StatusBadRequest, "agent_id is required")
+		return
+	}
+	if req.Prompt == "" {
+		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
 
@@ -581,6 +586,17 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to create managed session", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to create session")
 		return
+	}
+
+	// Launch agentic execution asynchronously
+	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
+		slog.Error("failed to start session execution", "error", err, "session_id", uuidToString(session.ID))
+		// Session is created but execution failed to start — update status
+		h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
+			ID:     session.ID,
+			Status: "failed",
+		})
+		session.Status = "failed"
 	}
 
 	writeJSON(w, http.StatusCreated, managedSessionToResponse(session))

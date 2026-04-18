@@ -63,6 +63,28 @@ import type {
   ListAutopilotsResponse,
   GetAutopilotResponse,
   ListAutopilotRunsResponse,
+  ManagedAgent,
+  ManagedAgentVersion,
+  CreateManagedAgentRequest,
+  UpdateManagedAgentRequest,
+  ManagedEnvironment,
+  CreateEnvironmentRequest,
+  ManagedSession,
+  CreateManagedSessionRequest,
+  SessionEvent,
+  MemoryStore,
+  CreateMemoryStoreRequest,
+  MemoryDocument,
+  WriteMemoryRequest,
+  UpdateMemoryRequest,
+  MemoryVersion,
+  ManagedVault,
+  CreateVaultRequest,
+  VaultCredentialSummary,
+  AddVaultCredentialRequest,
+  SessionThread,
+  SendSessionEventsRequest,
+  PaginatedResponse,
 } from "../types";
 import { type Logger, noopLogger } from "../logger";
 import { createRequestId } from "../utils";
@@ -879,5 +901,228 @@ export class ApiClient {
 
   async deleteAutopilotTrigger(autopilotId: string, triggerId: string): Promise<void> {
     await this.fetch(`/api/autopilots/${autopilotId}/triggers/${triggerId}`, { method: "DELETE" });
+  }
+
+  // -------------------------------------------------------------------------
+  // v1 Managed Agents API
+  // -------------------------------------------------------------------------
+
+  // Agents
+  async listManagedAgents(): Promise<PaginatedResponse<ManagedAgent>> {
+    return this.fetch("/api/v1/agents");
+  }
+
+  async createManagedAgent(data: CreateManagedAgentRequest): Promise<ManagedAgent> {
+    return this.fetch("/api/v1/agents", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getManagedAgent(agentId: string): Promise<ManagedAgent> {
+    return this.fetch(`/api/v1/agents/${agentId}`);
+  }
+
+  async updateManagedAgent(agentId: string, data: UpdateManagedAgentRequest): Promise<ManagedAgent> {
+    return this.fetch(`/api/v1/agents/${agentId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async archiveManagedAgent(agentId: string): Promise<void> {
+    await this.fetch(`/api/v1/agents/${agentId}/archive`, { method: "POST" });
+  }
+
+  async listManagedAgentVersions(agentId: string): Promise<PaginatedResponse<ManagedAgentVersion>> {
+    return this.fetch(`/api/v1/agents/${agentId}/versions`);
+  }
+
+  // Environments
+  async listEnvironments(): Promise<PaginatedResponse<ManagedEnvironment>> {
+    return this.fetch("/api/v1/environments");
+  }
+
+  async createEnvironment(data: CreateEnvironmentRequest): Promise<ManagedEnvironment> {
+    return this.fetch("/api/v1/environments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getEnvironment(envId: string): Promise<ManagedEnvironment> {
+    return this.fetch(`/api/v1/environments/${envId}`);
+  }
+
+  async archiveEnvironment(envId: string): Promise<void> {
+    await this.fetch(`/api/v1/environments/${envId}/archive`, { method: "POST" });
+  }
+
+  async deleteEnvironment(envId: string): Promise<void> {
+    await this.fetch(`/api/v1/environments/${envId}`, { method: "DELETE" });
+  }
+
+  // Sessions
+  async listManagedSessions(): Promise<PaginatedResponse<ManagedSession>> {
+    return this.fetch("/api/v1/sessions");
+  }
+
+  async createManagedSession(data: CreateManagedSessionRequest): Promise<ManagedSession> {
+    return this.fetch("/api/v1/sessions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getManagedSession(sessionId: string): Promise<ManagedSession> {
+    return this.fetch(`/api/v1/sessions/${sessionId}`);
+  }
+
+  async archiveManagedSession(sessionId: string): Promise<void> {
+    await this.fetch(`/api/v1/sessions/${sessionId}/archive`, { method: "POST" });
+  }
+
+  async deleteManagedSession(sessionId: string): Promise<void> {
+    await this.fetch(`/api/v1/sessions/${sessionId}`, { method: "DELETE" });
+  }
+
+  async listSessionEvents(sessionId: string, opts?: { limit?: number; offset?: number }): Promise<PaginatedResponse<SessionEvent>> {
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return this.fetch(`/api/v1/sessions/${sessionId}/events${qs ? `?${qs}` : ""}`);
+  }
+
+  async sendSessionEvents(sessionId: string, data: SendSessionEventsRequest): Promise<{ status: string; events: Array<{ id: string; type: string; created_at: string }> }> {
+    return this.fetch(`/api/v1/sessions/${sessionId}/events`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  streamSessionEvents(sessionId: string): EventSource {
+    return new EventSource(`${this.baseUrl}/api/v1/sessions/${sessionId}/stream`);
+  }
+
+  // Session Threads
+  async listSessionThreads(sessionId: string): Promise<PaginatedResponse<SessionThread>> {
+    return this.fetch(`/api/v1/sessions/${sessionId}/threads`);
+  }
+
+  async listThreadEvents(sessionId: string, threadId: string): Promise<PaginatedResponse<SessionEvent>> {
+    return this.fetch(`/api/v1/sessions/${sessionId}/threads/${threadId}/events`);
+  }
+
+  streamSessionThread(sessionId: string, threadId: string): EventSource {
+    return new EventSource(`${this.baseUrl}/api/v1/sessions/${sessionId}/threads/${threadId}/stream`);
+  }
+
+  // Memory Stores
+  async listMemoryStores(): Promise<PaginatedResponse<MemoryStore>> {
+    return this.fetch("/api/v1/memory-stores");
+  }
+
+  async createMemoryStore(data: CreateMemoryStoreRequest): Promise<MemoryStore> {
+    return this.fetch("/api/v1/memory-stores", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMemoryStore(storeId: string): Promise<MemoryStore> {
+    return this.fetch(`/api/v1/memory-stores/${storeId}`);
+  }
+
+  async archiveMemoryStore(storeId: string): Promise<void> {
+    await this.fetch(`/api/v1/memory-stores/${storeId}/archive`, { method: "POST" });
+  }
+
+  // Memories
+  async listMemories(storeId: string, opts?: { limit?: number; offset?: number }): Promise<PaginatedResponse<MemoryDocument>> {
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return this.fetch(`/api/v1/memory-stores/${storeId}/memories${qs ? `?${qs}` : ""}`);
+  }
+
+  async writeMemory(storeId: string, data: WriteMemoryRequest): Promise<MemoryDocument> {
+    return this.fetch(`/api/v1/memory-stores/${storeId}/memories`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async readMemory(storeId: string, memId: string): Promise<MemoryDocument> {
+    return this.fetch(`/api/v1/memory-stores/${storeId}/memories/${memId}`);
+  }
+
+  async updateMemory(storeId: string, memId: string, data: UpdateMemoryRequest): Promise<MemoryDocument> {
+    return this.fetch(`/api/v1/memory-stores/${storeId}/memories/${memId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMemory(storeId: string, memId: string): Promise<void> {
+    await this.fetch(`/api/v1/memory-stores/${storeId}/memories/${memId}`, { method: "DELETE" });
+  }
+
+  // Memory Versions
+  async listMemoryVersions(storeId: string, opts?: { limit?: number; offset?: number }): Promise<PaginatedResponse<MemoryVersion>> {
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set("limit", String(opts.limit));
+    if (opts?.offset) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return this.fetch(`/api/v1/memory-stores/${storeId}/versions${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMemoryVersion(storeId: string, versionId: string): Promise<MemoryVersion> {
+    return this.fetch(`/api/v1/memory-stores/${storeId}/versions/${versionId}`);
+  }
+
+  async redactMemoryVersion(storeId: string, versionId: string): Promise<void> {
+    await this.fetch(`/api/v1/memory-stores/${storeId}/versions/${versionId}/redact`, { method: "POST" });
+  }
+
+  // Vaults
+  async listVaults(): Promise<PaginatedResponse<ManagedVault>> {
+    return this.fetch("/api/v1/vaults");
+  }
+
+  async createVault(data: CreateVaultRequest): Promise<ManagedVault> {
+    return this.fetch("/api/v1/vaults", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVault(vaultId: string): Promise<ManagedVault> {
+    return this.fetch(`/api/v1/vaults/${vaultId}`);
+  }
+
+  async archiveVault(vaultId: string): Promise<void> {
+    await this.fetch(`/api/v1/vaults/${vaultId}/archive`, { method: "POST" });
+  }
+
+  async deleteVault(vaultId: string): Promise<void> {
+    await this.fetch(`/api/v1/vaults/${vaultId}`, { method: "DELETE" });
+  }
+
+  // Vault Credentials
+  async listVaultCredentials(vaultId: string): Promise<PaginatedResponse<VaultCredentialSummary>> {
+    return this.fetch(`/api/v1/vaults/${vaultId}/credentials`);
+  }
+
+  async addVaultCredential(vaultId: string, data: AddVaultCredentialRequest): Promise<VaultCredentialSummary> {
+    return this.fetch(`/api/v1/vaults/${vaultId}/credentials`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async archiveVaultCredential(vaultId: string, credId: string): Promise<void> {
+    await this.fetch(`/api/v1/vaults/${vaultId}/credentials/${credId}/archive`, { method: "POST" });
   }
 }

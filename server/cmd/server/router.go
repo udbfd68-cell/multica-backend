@@ -395,6 +395,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Route("/{envId}", func(r chi.Router) {
 					r.Get("/", h.GetEnvironment)
 					r.Post("/archive", h.ArchiveEnvironment)
+					r.Delete("/", h.DeleteEnvironment)
 				})
 			})
 
@@ -404,8 +405,17 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Route("/{sessionId}", func(r chi.Router) {
 					r.Get("/", h.GetManagedSession)
 					r.Post("/archive", h.ArchiveManagedSession)
+					r.Delete("/", h.DeleteManagedSession)
 					r.Get("/events", h.ListSessionEvents)
+					r.Post("/events", h.SendSessionEvents)
+					r.Post("/resume", h.ResumeSession)
 					r.Get("/stream", h.StreamSessionEvents)
+					// Session threads
+					r.Get("/threads", h.ListSessionThreads)
+					r.Route("/threads/{threadId}", func(r chi.Router) {
+						r.Get("/events", h.ListThreadEvents)
+						r.Get("/stream", h.StreamSessionThread)
+					})
 				})
 			})
 
@@ -414,6 +424,21 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Post("/", h.CreateMemoryStore)
 				r.Route("/{storeId}", func(r chi.Router) {
 					r.Get("/", h.GetMemoryStore)
+					r.Post("/archive", h.ArchiveMemoryStore)
+					// Memories within a store
+					r.Get("/memories", h.ListMemories)
+					r.Post("/memories", h.WriteMemory)
+					r.Route("/memories/{memId}", func(r chi.Router) {
+						r.Get("/", h.ReadMemory)
+						r.Put("/", h.UpdateMemory)
+						r.Delete("/", h.DeleteMemory)
+					})
+					// Memory versions
+					r.Get("/versions", h.ListMemoryVersions)
+					r.Route("/versions/{versionId}", func(r chi.Router) {
+						r.Get("/", h.GetMemoryVersion)
+						r.Post("/redact", h.RedactMemoryVersion)
+					})
 				})
 			})
 
@@ -422,6 +447,12 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 				r.Post("/", h.CreateVault)
 				r.Route("/{vaultId}", func(r chi.Router) {
 					r.Get("/", h.GetVault)
+					r.Post("/archive", h.ArchiveVault)
+					r.Delete("/", h.DeleteVault)
+					// Vault credentials
+					r.Get("/credentials", h.ListVaultCredentials)
+					r.Post("/credentials", h.AddVaultCredential)
+					r.Post("/credentials/{credId}/archive", h.ArchiveVaultCredential)
 				})
 			})
 

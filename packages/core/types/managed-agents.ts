@@ -196,6 +196,67 @@ export interface CreateVaultRequest {
   metadata?: Record<string, unknown>;
 }
 
+// Memory Versions
+export interface MemoryVersion {
+  id: string;
+  memory_id: string | null;
+  store_id: string;
+  operation: "created" | "modified" | "deleted";
+  content: string | null;
+  content_sha256: string | null;
+  content_size_bytes: number | null;
+  path: string;
+  session_id: string | null;
+  created_at: string;
+  redacted_at: string | null;
+}
+
+export interface WriteMemoryRequest {
+  path: string;
+  content: string;
+  precondition?: {
+    type: "not_exists" | "content_sha256";
+    content_sha256?: string;
+  };
+}
+
+export interface UpdateMemoryRequest {
+  content?: string;
+  precondition?: {
+    type: "content_sha256";
+    content_sha256: string;
+  };
+}
+
+// Session Threads
+export interface SessionThread {
+  id: string;
+  session_id: string;
+  agent_id: string;
+  agent_name: string;
+  status: string;
+  created_at: string;
+}
+
+export interface SendSessionEventsRequest {
+  events: Array<{
+    type: string;
+    session_thread_id?: string;
+    content?: Record<string, unknown>;
+    [key: string]: unknown;
+  }>;
+}
+
+// Vault Credential
+export interface AddVaultCredentialRequest {
+  mcp_server_url: string;
+  auth: {
+    type: "mcp_oauth" | "bearer";
+    token?: string;
+    [key: string]: unknown;
+  };
+}
+
 // Paginated list response
 export interface PaginatedResponse<T> {
   data: T[];
