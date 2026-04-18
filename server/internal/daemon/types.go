@@ -1,5 +1,7 @@
 package daemon
 
+import "github.com/multica-ai/multica/server/pkg/agent"
+
 // AgentEntry describes a single available agent CLI.
 type AgentEntry struct {
 	Path  string // path to CLI binary
@@ -46,6 +48,7 @@ type AgentData struct {
 	Skills       []SkillData       `json:"skills"`
 	CustomEnv    map[string]string `json:"custom_env,omitempty"`
 	CustomArgs   []string          `json:"custom_args,omitempty"`
+	McpServers   []agent.McpServerSpec `json:"mcp_servers,omitempty"`
 }
 
 // SkillData represents a structured skill for task execution.

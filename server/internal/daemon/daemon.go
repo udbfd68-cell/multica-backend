@@ -1017,12 +1017,17 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	if task.Agent != nil {
 		customArgs = task.Agent.CustomArgs
 	}
+	var mcpServers []agent.McpServerSpec
+	if task.Agent != nil && len(task.Agent.McpServers) > 0 {
+		mcpServers = task.Agent.McpServers
+	}
 	execOpts := agent.ExecOptions{
 		Cwd:             env.WorkDir,
 		Model:           entry.Model,
 		Timeout:         d.cfg.AgentTimeout,
 		ResumeSessionID: task.PriorSessionID,
 		CustomArgs:      customArgs,
+		McpServers:      mcpServers,
 	}
 
 	result, tools, err := d.executeAndDrain(ctx, backend, prompt, execOpts, taskLog, task.ID)

@@ -13,6 +13,7 @@ import (
 	"github.com/multica-ai/multica/server/internal/crypto"
 	"github.com/multica-ai/multica/server/internal/logger"
 	"github.com/multica-ai/multica/server/internal/service"
+	"github.com/multica-ai/multica/server/pkg/agent"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
 )
@@ -138,6 +139,7 @@ type TaskAgentData struct {
 	Skills       []service.AgentSkillData `json:"skills,omitempty"`
 	CustomEnv    map[string]string        `json:"custom_env,omitempty"`
 	CustomArgs   []string                 `json:"custom_args,omitempty"`
+	McpServers   []agent.McpServerSpec    `json:"mcp_servers,omitempty"`
 }
 
 func taskToResponse(t db.AgentTaskQueue) AgentTaskResponse {

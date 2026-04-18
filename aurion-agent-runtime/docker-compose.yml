@@ -1,0 +1,81 @@
+version: "3.8"
+
+services:
+  # ── API Server ─────────────────────────────────────────────────────────
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://aurion:aurion@postgres:5432/aurion
+      - REDIS_URL=redis://redis:6379/0
+      - FALKORDB_URL=bolt://falkordb:6379
+      - SANDBOX_PROVIDER=docker
+      - LOG_LEVEL=info
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker sandbox
+    restart: unless-stopped
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aurion
+      POSTGRES_USER: aurion
+      POSTGRES_PASSWORD: aurion
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurion"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FalkorDB (for Graphiti memory) ─────────────────────────────────────
+  falkordb:
+    image: falkordb/falkordb:latest
+    ports:
+      - "6380:6379"
+    volumes:
+      - falkordb_data:/data
+
+  # ── Langfuse (self-hosted observability) ───────────────────────────────
+  langfuse:
+    image: langfuse/langfuse:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://aurion:aurion@postgres:5432/langfuse
+      - NEXTAUTH_SECRET=aurion-langfuse-secret
+      - NEXTAUTH_URL=http://localhost:3001
+      - SALT=aurion-salt
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  falkordb_data:

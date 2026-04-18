@@ -1125,4 +1125,60 @@ export class ApiClient {
   async archiveVaultCredential(vaultId: string, credId: string): Promise<void> {
     await this.fetch(`/api/v1/vaults/${vaultId}/credentials/${credId}/archive`, { method: "POST" });
   }
+
+  // ===== MCP Registry & Connectors =====
+
+  async listMcpCatalog(category?: string): Promise<{ data: import("../types/mcp").McpCatalogEntry[] }> {
+    const qs = category ? `?category=${category}` : "";
+    return this.fetch(`/api/v1/mcp/catalog${qs}`);
+  }
+
+  async listMcpRegistry(): Promise<{ data: import("../types/mcp").McpRegistryEntry[] }> {
+    return this.fetch("/api/v1/mcp/registry");
+  }
+
+  async seedMcpRegistry(slug: string): Promise<import("../types/mcp").McpRegistryEntry> {
+    return this.fetch("/api/v1/mcp/registry/seed", {
+      method: "POST",
+      body: JSON.stringify({ slug }),
+    });
+  }
+
+  async seedAllMcpRegistry(): Promise<{ seeded: number; total_catalog: number }> {
+    return this.fetch("/api/v1/mcp/registry/seed-all", { method: "POST" });
+  }
+
+  async listAgentMcpConnectors(agentId: string): Promise<{ data: import("../types/mcp").McpConnector[] }> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp`);
+  }
+
+  async createAgentMcpConnector(agentId: string, data: import("../types/mcp").CreateMcpConnectorRequest): Promise<import("../types/mcp").McpConnector> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addMcpFromRegistry(agentId: string, registryId: string, vaultCredentialId?: string): Promise<import("../types/mcp").McpConnector> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp/from-registry`, {
+      method: "POST",
+      body: JSON.stringify({ registry_id: registryId, vault_credential_id: vaultCredentialId }),
+    });
+  }
+
+  async autoAttachBrowserMcp(agentId: string): Promise<{ attached: number; no_auth_servers: number }> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp/auto-attach-browser`, { method: "POST" });
+  }
+
+  async validateMcpConnector(agentId: string, connectorId: string): Promise<import("../types/mcp").McpValidationResult> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp/${connectorId}/validate`, { method: "POST" });
+  }
+
+  async discoverMcpTools(agentId: string, connectorId: string): Promise<{ tools: import("../types/mcp").McpDiscoveredTool[] }> {
+    return this.fetch(`/api/v1/agents/${agentId}/mcp/${connectorId}/discover`, { method: "POST" });
+  }
+
+  async deleteMcpConnector(agentId: string, connectorId: string): Promise<void> {
+    await this.fetch(`/api/v1/agents/${agentId}/mcp/${connectorId}`, { method: "DELETE" });
+  }
 }

@@ -16,6 +16,8 @@ export type McpCategory =
   | "browser"
   | "memory"
   | "finance"
+  | "utility"
+  | "ai"
   | "other";
 
 // Built-in catalog entry (no DB, static)

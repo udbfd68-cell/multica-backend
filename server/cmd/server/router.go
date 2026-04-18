@@ -380,6 +380,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 						r.Get("/", h.ListAgentMcpConnectors)
 						r.Post("/", h.CreateAgentMcpConnector)
 						r.Post("/from-registry", h.AddMcpFromRegistry)
+						r.Post("/auto-attach-browser", h.AutoAttachBrowserMcp)
 						r.Route("/{connectorId}", func(r chi.Router) {
 							r.Get("/", h.GetAgentMcpConnector)
 							r.Put("/", h.UpdateAgentMcpConnector)

@@ -543,6 +543,79 @@ func (h *Handler) AddMcpFromRegistry(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, mcpConnectorToResponse(item))
 }
 
+// AutoAttachBrowserMcp attaches all zero-auth browser automation MCP servers to an agent.
+// This is the "make my agent a real browser agent" 1-click button. No API keys needed.
+func (h *Handler) AutoAttachBrowserMcp(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+	agentID := chi.URLParam(r, "agentId")
+	wsUUID := parseUUID(workspaceID)
+	agUUID := parseUUID(agentID)
+
+	// First, seed all catalog entries into the workspace registry (idempotent).
+	catalog := mcp.Catalog()
+	for _, s := range catalog {
+		if _, err := h.Queries.GetMcpServerRegistryBySlug(r.Context(), s.Slug, wsUUID); err == nil {
+			continue
+		}
+		argsJSON, _ := json.Marshal([]string{})
+		envJSON, _ := json.Marshal(s.EnvVars)
+		h.Queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
+			WorkspaceID: wsUUID, IsBuiltin: true, Slug: s.Slug, Name: s.Name,
+			Description: s.Description, Category: s.Category, RepoUrl: s.RepoURL,
+			Transport: s.Transport, Command: s.Command, Args: argsJSON,
+			EnvVars: envJSON, AuthType: s.AuthType, Tags: s.Tags,
+		})
+	}
+
+	// Attach all zero-auth servers from browser, utility, memory, search categories.
+	noAuthSlugs := []string{}
+	for _, s := range catalog {
+		if s.AuthType == "none" {
+			noAuthSlugs = append(noAuthSlugs, s.Slug)
+		}
+	}
+
+	attached := 0
+	for _, slug := range noAuthSlugs {
+		reg, err := h.Queries.GetMcpServerRegistryBySlug(r.Context(), slug, wsUUID)
+		if err != nil {
+			continue
+		}
+		// Check if already attached to this agent.
+		existing, _ := h.Queries.ListAgentMcpConnectors(r.Context(), agUUID, wsUUID)
+		alreadyAttached := false
+		for _, c := range existing {
+			if c.RegistryID.Valid && c.RegistryID == reg.ID {
+				alreadyAttached = true
+				break
+			}
+		}
+		if alreadyAttached {
+			continue
+		}
+		_, err = h.Queries.CreateAgentMcpConnector(r.Context(), db.CreateAgentMcpConnectorParams{
+			WorkspaceID: wsUUID,
+			AgentID:     agUUID,
+			RegistryID:  reg.ID,
+			Name:        reg.Name,
+			ServerUrl:   reg.ServerUrl,
+			Transport:   reg.Transport,
+			Command:     reg.Command,
+			Args:        reg.Args,
+			EnvConfig:   []byte("{}"),
+			AuthType:    reg.AuthType,
+			Enabled:     true,
+		})
+		if err == nil {
+			attached++
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"attached": attached, "no_auth_servers": len(noAuthSlugs)})
+}
+
 type UpdateMcpConnectorRequest struct {
 	Name              *string         `json:"name"`
 	ServerUrl         *string         `json:"server_url"`

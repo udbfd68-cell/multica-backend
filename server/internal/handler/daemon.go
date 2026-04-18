@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/crypto"
 	"github.com/multica-ai/multica/server/internal/middleware"
+	"github.com/multica-ai/multica/server/internal/service"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
 	"github.com/multica-ai/multica/server/pkg/redact"
@@ -519,7 +520,7 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build response with fresh agent data (name + skills + custom_env + custom_args).
+	// Build response with fresh agent data (name + skills + custom_env + custom_args + mcp).
 	resp := taskToResponse(*task)
 	if agent, err := h.Queries.GetAgent(r.Context(), task.AgentID); err == nil {
 		skills := h.TaskService.LoadAgentSkills(r.Context(), task.AgentID)
@@ -543,6 +544,31 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 				slog.Warn("failed to unmarshal agent custom_args", "agent_id", uuidToString(agent.ID), "error", err)
 			}
 		}
+
+		// Load MCP servers configured for this agent.
+		var workspaceUUID pgtype.UUID
+		if task.IssueID.Valid {
+			if issue, err := h.Queries.GetIssue(r.Context(), task.IssueID); err == nil {
+				workspaceUUID = issue.WorkspaceID
+			}
+		} else if task.ChatSessionID.Valid {
+			if cs, err := h.Queries.GetChatSession(r.Context(), task.ChatSessionID); err == nil {
+				workspaceUUID = cs.WorkspaceID
+			}
+		}
+		mcpServers, err := service.LoadMcpServersForAgent(r.Context(), h.Queries, agent.ID, workspaceUUID)
+		if err != nil {
+			slog.Warn("failed to load MCP servers for agent", "agent_id", uuidToString(agent.ID), "error", err)
+		}
+		// Decrypt MCP env vars for daemon consumption.
+		for i := range mcpServers {
+			if mcpServers[i].Env != nil {
+				if decrypted, err := crypto.DecryptMap(mcpServers[i].Env); err == nil {
+					mcpServers[i].Env = decrypted
+				}
+			}
+		}
+
 		resp.Agent = &TaskAgentData{
 			ID:           uuidToString(agent.ID),
 			Name:         agent.Name,
@@ -550,6 +576,7 @@ func (h *Handler) ClaimTaskByRuntime(w http.ResponseWriter, r *http.Request) {
 			Skills:       skills,
 			CustomEnv:    customEnv,
 			CustomArgs:   customArgs,
+			McpServers:   mcpServers,
 		}
 	}
 
