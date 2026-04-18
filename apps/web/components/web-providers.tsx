@@ -37,7 +37,10 @@ export function WebProviders({ children }: { children: React.ReactNode }) {
   // HttpOnly cookies with SameSite=Strict won't be sent cross-origin.
   // Fall back to token mode (localStorage + Authorization header) so auth works.
   const isCrossOrigin = Boolean(process.env.NEXT_PUBLIC_API_URL);
-  const cookieAuth = !isCrossOrigin && !hasLegacyToken();
+  // When an auto-token is configured, use token auth (Bearer header) instead
+  // of cookie auth so AuthInitializer can inject it from the env var.
+  const hasAutoToken = Boolean(process.env.NEXT_PUBLIC_AUTO_TOKEN);
+  const cookieAuth = !isCrossOrigin && !hasLegacyToken() && !hasAutoToken;
   return (
     <CoreProvider
       apiBaseUrl={process.env.NEXT_PUBLIC_API_URL}
