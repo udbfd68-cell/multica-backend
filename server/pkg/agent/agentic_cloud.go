@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -69,9 +70,14 @@ func NewAgenticCloudClaude(apiKey string, logger *slog.Logger, executor ToolExec
 		builtinSet[t.Name] = true
 	}
 
+	baseURL := os.Getenv("ANTHROPIC_BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://api.anthropic.com"
+	}
+
 	return &agenticCloudBackend{
 		apiKey:         apiKey,
-		baseURL:        "https://api.anthropic.com",
+		baseURL:        strings.TrimRight(baseURL, "/"),
 		logger:         logger,
 		toolExecutor:   executor,
 		tools:          tools,
@@ -86,6 +92,9 @@ func (b *agenticCloudBackend) Execute(ctx context.Context, prompt string, opts E
 	}
 
 	model := opts.Model
+	if model == "" {
+		model = os.Getenv("CLOUD_DEFAULT_MODEL")
+	}
 	if model == "" {
 		model = "claude-sonnet-4-20250514"
 	}
@@ -513,7 +522,12 @@ func (b *agenticCloudBackend) callAnthropicAPI(
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", b.apiKey)
+	if strings.Contains(b.baseURL, "openrouter.ai") {
+		req.Header.Set("Authorization", "Bearer "+b.apiKey)
+		req.Header.Set("HTTP-Referer", os.Getenv("FRONTEND_ORIGIN"))
+	} else {
+		req.Header.Set("x-api-key", b.apiKey)
+	}
 	req.Header.Set("anthropic-version", "2023-06-01")
 
 	resp, err := http.DefaultClient.Do(req)

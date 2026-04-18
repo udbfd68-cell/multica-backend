@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -27,9 +28,13 @@ func NewCloudClaude(apiKey string, logger *slog.Logger) Backend {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	baseURL := os.Getenv("ANTHROPIC_BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://api.anthropic.com"
+	}
 	return &cloudClaudeBackend{
 		apiKey:  apiKey,
-		baseURL: "https://api.anthropic.com",
+		baseURL: strings.TrimRight(baseURL, "/"),
 		logger:  logger,
 	}
 }
@@ -120,6 +125,9 @@ func (b *cloudClaudeBackend) Execute(ctx context.Context, prompt string, opts Ex
 
 	model := opts.Model
 	if model == "" {
+		model = os.Getenv("CLOUD_DEFAULT_MODEL")
+	}
+	if model == "" {
 		model = "claude-sonnet-4-20250514"
 	}
 
@@ -162,10 +170,15 @@ func (b *cloudClaudeBackend) Execute(ctx context.Context, prompt string, opts Ex
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", b.apiKey)
+	if strings.Contains(b.baseURL, "openrouter.ai") {
+		req.Header.Set("Authorization", "Bearer "+b.apiKey)
+		req.Header.Set("HTTP-Referer", os.Getenv("FRONTEND_ORIGIN"))
+	} else {
+		req.Header.Set("x-api-key", b.apiKey)
+	}
 	req.Header.Set("anthropic-version", "2023-06-01")
 
-	b.logger.Info("cloud claude: calling Anthropic API", "model", model, "prompt_len", len(prompt))
+	b.logger.Info("cloud claude: calling API", "model", model, "base_url", b.baseURL, "prompt_len", len(prompt))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
