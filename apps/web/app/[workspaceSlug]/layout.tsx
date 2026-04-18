@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { WorkspaceSlugProvider } from "@multica/core/paths";
 import { workspaceBySlugOptions } from "@multica/core/workspace";
@@ -63,7 +64,20 @@ export default function WorkspaceLayout({
     </div>
   );
 
+  const router = useRouter();
+
+  // Redirect unauthenticated users to /login instead of showing an
+  // infinite loading spinner.  When auth resolves with no user the
+  // workspace query stays disabled (enabled: !!user) so listFetched
+  // would never become true — without this guard the spinner persists.
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.replace("/login");
+    }
+  }, [isAuthLoading, user, router]);
+
   if (isAuthLoading) return loadingIndicator;
+  if (!user) return loadingIndicator; // brief flash while redirect fires
   // Don't render children until workspace is resolved. useWorkspaceId()
   // throws when the list hasn't populated or the slug is unknown — gating
   // here makes that invariant hold for every descendant.
