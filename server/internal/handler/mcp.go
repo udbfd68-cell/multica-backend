@@ -97,9 +97,9 @@ func (h *Handler) ListMcpRegistry(w http.ResponseWriter, r *http.Request) {
 		err   error
 	)
 	if category != "" {
-		items, err = h.queries.ListMcpServerRegistryByCategory(r.Context(), parseUUID(workspaceID), category)
+		items, err = h.Queries.ListMcpServerRegistryByCategory(r.Context(), parseUUID(workspaceID), category)
 	} else {
-		items, err = h.queries.ListMcpServerRegistry(r.Context(), parseUUID(workspaceID))
+		items, err = h.Queries.ListMcpServerRegistry(r.Context(), parseUUID(workspaceID))
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list registry")
@@ -120,7 +120,7 @@ func (h *Handler) GetMcpRegistry(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	id := chi.URLParam(r, "registryId")
 
-	item, err := h.queries.GetMcpServerRegistry(r.Context(), parseUUID(id), parseUUID(workspaceID))
+	item, err := h.Queries.GetMcpServerRegistry(r.Context(), parseUUID(id), parseUUID(workspaceID))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "registry entry not found")
 		return
@@ -175,7 +175,7 @@ func (h *Handler) CreateMcpRegistry(w http.ResponseWriter, r *http.Request) {
 		req.Tags = []string{}
 	}
 
-	item, err := h.queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
+	item, err := h.Queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
 		WorkspaceID: parseUUID(workspaceID),
 		IsBuiltin:   false,
 		Slug:        req.Slug,
@@ -231,7 +231,7 @@ func (h *Handler) SeedMcpRegistry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if already exists
-	_, err := h.queries.GetMcpServerRegistryBySlug(r.Context(), match.Slug, wsUUID)
+	_, err := h.Queries.GetMcpServerRegistryBySlug(r.Context(), match.Slug, wsUUID)
 	if err == nil {
 		writeError(w, http.StatusConflict, "server already in registry")
 		return
@@ -240,7 +240,7 @@ func (h *Handler) SeedMcpRegistry(w http.ResponseWriter, r *http.Request) {
 	argsJSON, _ := json.Marshal([]string{})
 	envJSON, _ := json.Marshal(match.EnvVars)
 
-	item, err := h.queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
+	item, err := h.Queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
 		WorkspaceID: wsUUID,
 		IsBuiltin:   true,
 		Slug:        match.Slug,
@@ -274,14 +274,14 @@ func (h *Handler) SeedAllMcpRegistry(w http.ResponseWriter, r *http.Request) {
 	seeded := 0
 	for _, s := range catalog {
 		// Skip if exists
-		if _, err := h.queries.GetMcpServerRegistryBySlug(r.Context(), s.Slug, wsUUID); err == nil {
+		if _, err := h.Queries.GetMcpServerRegistryBySlug(r.Context(), s.Slug, wsUUID); err == nil {
 			continue
 		}
 
 		argsJSON, _ := json.Marshal([]string{})
 		envJSON, _ := json.Marshal(s.EnvVars)
 
-		_, err := h.queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
+		_, err := h.Queries.CreateMcpServerRegistry(r.Context(), db.CreateMcpServerRegistryParams{
 			WorkspaceID: wsUUID,
 			IsBuiltin:   true,
 			Slug:        s.Slug,
@@ -310,7 +310,7 @@ func (h *Handler) DeleteMcpRegistry(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	id := chi.URLParam(r, "registryId")
 
-	if err := h.queries.DeleteMcpServerRegistry(r.Context(), parseUUID(id), parseUUID(workspaceID)); err != nil {
+	if err := h.Queries.DeleteMcpServerRegistry(r.Context(), parseUUID(id), parseUUID(workspaceID)); err != nil {
 		writeError(w, http.StatusNotFound, "registry entry not found")
 		return
 	}
@@ -385,7 +385,7 @@ func (h *Handler) ListAgentMcpConnectors(w http.ResponseWriter, r *http.Request)
 	workspaceID := ctxWorkspaceID(r.Context())
 	agentID := chi.URLParam(r, "agentId")
 
-	items, err := h.queries.ListAgentMcpConnectors(r.Context(), parseUUID(agentID), parseUUID(workspaceID))
+	items, err := h.Queries.ListAgentMcpConnectors(r.Context(), parseUUID(agentID), parseUUID(workspaceID))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list connectors")
 		return
@@ -405,7 +405,7 @@ func (h *Handler) GetAgentMcpConnector(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	connectorID := chi.URLParam(r, "connectorId")
 
-	item, err := h.queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
+	item, err := h.Queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "connector not found")
 		return
@@ -478,7 +478,7 @@ func (h *Handler) CreateAgentMcpConnector(w http.ResponseWriter, r *http.Request
 		params.VaultCredentialID = parseUUID(*req.VaultCredentialID)
 	}
 
-	item, err := h.queries.CreateAgentMcpConnector(r.Context(), params)
+	item, err := h.Queries.CreateAgentMcpConnector(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create connector")
 		return
@@ -510,7 +510,7 @@ func (h *Handler) AddMcpFromRegistry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reg, err := h.queries.GetMcpServerRegistry(r.Context(), parseUUID(req.RegistryID), wsUUID)
+	reg, err := h.Queries.GetMcpServerRegistry(r.Context(), parseUUID(req.RegistryID), wsUUID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "registry entry not found")
 		return
@@ -533,7 +533,7 @@ func (h *Handler) AddMcpFromRegistry(w http.ResponseWriter, r *http.Request) {
 		params.VaultCredentialID = parseUUID(*req.VaultCredentialID)
 	}
 
-	item, err := h.queries.CreateAgentMcpConnector(r.Context(), params)
+	item, err := h.Queries.CreateAgentMcpConnector(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create connector from registry")
 		return
@@ -582,7 +582,7 @@ func (h *Handler) UpdateAgentMcpConnector(w http.ResponseWriter, r *http.Request
 		params.VaultCredentialID = parseUUID(*req.VaultCredentialID)
 	}
 
-	item, err := h.queries.UpdateAgentMcpConnector(r.Context(), params)
+	item, err := h.Queries.UpdateAgentMcpConnector(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "connector not found")
 		return
@@ -597,7 +597,7 @@ func (h *Handler) DeleteAgentMcpConnector(w http.ResponseWriter, r *http.Request
 	workspaceID := ctxWorkspaceID(r.Context())
 	connectorID := chi.URLParam(r, "connectorId")
 
-	if err := h.queries.DeleteAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID)); err != nil {
+	if err := h.Queries.DeleteAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID)); err != nil {
 		writeError(w, http.StatusNotFound, "connector not found")
 		return
 	}
@@ -614,7 +614,7 @@ func (h *Handler) ValidateMcpConnector(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	connectorID := chi.URLParam(r, "connectorId")
 
-	connector, err := h.queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
+	connector, err := h.Queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "connector not found")
 		return
@@ -640,7 +640,7 @@ func (h *Handler) ValidateMcpConnector(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update status in DB
-	_ = h.queries.UpdateAgentMcpConnectorStatus(r.Context(), connector.ID, status, statusMsg)
+	_ = h.Queries.UpdateAgentMcpConnectorStatus(r.Context(), connector.ID, status, statusMsg)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":           uuidToString(connector.ID),
@@ -660,7 +660,7 @@ func (h *Handler) DiscoverMcpTools(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	connectorID := chi.URLParam(r, "connectorId")
 
-	connector, err := h.queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
+	connector, err := h.Queries.GetAgentMcpConnector(r.Context(), parseUUID(connectorID), parseUUID(workspaceID))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "connector not found")
 		return
