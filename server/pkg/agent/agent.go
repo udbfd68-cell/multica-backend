@@ -105,7 +105,6 @@ const (
 	MessageCustomToolUse   MessageType = "custom-tool-use"   // tool requires client execution
 	MessageToolConfirmReq  MessageType = "tool-confirm-req"  // tool needs permission approval
 )
-)
 
 // Message is a unified event emitted by an agent during execution.
 type Message struct {
