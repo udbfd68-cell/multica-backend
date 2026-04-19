@@ -22,16 +22,8 @@ export function latestCliVersionOptions() {
   return queryOptions({
     queryKey: runtimeKeys.latestVersion(),
     queryFn: async (): Promise<string | null> => {
-      try {
-        const resp = await fetch(GITHUB_RELEASES_URL, {
-          headers: { Accept: "application/vnd.github+json" },
-        });
-        if (!resp.ok) return null;
-        const data = await resp.json();
-        return (data.tag_name as string) ?? null;
-      } catch {
-        return null;
-      }
+      // Disabled: no GitHub releases published yet.
+      return null;
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
