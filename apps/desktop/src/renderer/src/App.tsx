@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CoreProvider } from "@multica/core/platform";
-import { useAuthStore } from "@multica/core/auth";
-import { workspaceKeys, workspaceListOptions } from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
-import { ThemeProvider } from "@multica/ui/components/common/theme-provider";
-import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
+import { CoreProvider } from "@aurion/core/platform";
+import { useAuthStore } from "@aurion/core/auth";
+import { workspaceKeys, workspaceListOptions } from "@aurion/core/workspace/queries";
+import { api } from "@aurion/core/api";
+import { ThemeProvider } from "@aurion/ui/components/common/theme-provider";
+import { AurionIcon } from "@aurion/ui/components/common/aurion-icon";
 import { Toaster } from "sonner";
 import { DesktopLoginPage } from "./pages/login";
 import { DesktopShell } from "./components/desktop-layout";
@@ -28,12 +28,12 @@ function AppContent() {
   const [bootstrapping, setBootstrapping] = useState(false);
 
   // Tell the main process which backend URL we talk to, so daemon-manager
-  // can pick the matching CLI profile (server_url from ~/.multica config).
+  // can pick the matching CLI profile (server_url from ~/.aurion config).
   useEffect(() => {
     window.daemonAPI.setTargetApiUrl(DAEMON_TARGET_API_URL);
   }, []);
 
-  // Listen for invite IDs delivered via deep link (multica://invite/<id>).
+  // Listen for invite IDs delivered via deep link (aurion://invite/<id>).
   // We open the overlay regardless of login state — if the user isn't logged
   // in, InvitePage's queries will fail and render the "not found" state,
   // which is acceptable; the expected pre-flight happens in the web app
@@ -44,7 +44,7 @@ function AppContent() {
     });
   }, []);
 
-  // Listen for auth token delivered via deep link (multica://auth/callback?token=...).
+  // Listen for auth token delivered via deep link (aurion://auth/callback?token=...).
   // daemonAPI.syncToken is handled separately by the [user] effect below, which
   // fires whenever a user logs in (deep link, session restore, account switch).
   useEffect(() => {
@@ -70,7 +70,7 @@ function AppContent() {
   // Sync token and start the daemon whenever the user logs in.
   useEffect(() => {
     if (!user) return;
-    const token = localStorage.getItem("multica_token");
+    const token = localStorage.getItem("aurion_token");
     if (!token) return;
     const userId = user.id;
     (async () => {
@@ -153,7 +153,7 @@ function AppContent() {
   if (isLoading || bootstrapping) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <MulticaIcon className="size-6 animate-pulse" />
+        <AurionIcon className="size-6 animate-pulse" />
       </div>
     );
   }

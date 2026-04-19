@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { RuntimeUsage } from "@multica/core/types";
+import type { RuntimeUsage } from "@aurion/core/types";
 import { formatTokens } from "../../utils";
 
 const HEATMAP_WEEKS = 13;

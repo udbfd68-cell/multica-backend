@@ -25,7 +25,7 @@ func NewEmailService() *EmailService {
 	apiKey := os.Getenv("RESEND_API_KEY")
 	from := os.Getenv("RESEND_FROM_EMAIL")
 	if from == "" {
-		from = "noreply@multica.ai"
+		from = "noreply@aurion.studio"
 	}
 
 	var client *resend.Client
@@ -52,7 +52,7 @@ func (s *EmailService) SendVerificationCode(to, code string) error {
 	params := &resend.SendEmailRequest{
 		From:    s.fromEmail,
 		To:      []string{to},
-		Subject: "Your Multica verification code",
+		Subject: "Your Aurion verification code",
 		Html: fmt.Sprintf(
 			`<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto;">
 				<h2>Your verification code</h2>
@@ -71,7 +71,7 @@ func (s *EmailService) SendVerificationCode(to, code string) error {
 func (s *EmailService) SendInvitationEmail(to, inviterName, workspaceName, invitationID string) error {
 	appURL := strings.TrimSpace(os.Getenv("FRONTEND_ORIGIN"))
 	if appURL == "" {
-		appURL = "https://app.multica.ai"
+		appURL = "https://app.aurion.studio"
 	}
 	inviteURL := fmt.Sprintf("%s/invite/%s", appURL, invitationID)
 
@@ -97,11 +97,11 @@ func buildInvitationParams(from, to, inviterName, workspaceName, inviteURL strin
 	return &resend.SendEmailRequest{
 		From:    from,
 		To:      []string{to},
-		Subject: fmt.Sprintf("%s invited you to %s on Multica", subjectInviter, subjectWorkspace),
+		Subject: fmt.Sprintf("%s invited you to %s on Aurion", subjectInviter, subjectWorkspace),
 		Html: fmt.Sprintf(
 			`<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
 				<h2>You're invited to join %s</h2>
-				<p><strong>%s</strong> invited you to collaborate in the <strong>%s</strong> workspace on Multica.</p>
+				<p><strong>%s</strong> invited you to collaborate in the <strong>%s</strong> workspace on Aurion.</p>
 				<p style="margin: 24px 0;">
 					<a href="%s" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 500;">Accept invitation</a>
 				</p>

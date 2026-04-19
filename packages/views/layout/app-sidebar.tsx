@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@aurion/ui/lib/utils";
 import { AppLink, useNavigation } from "../navigation";
 import {
   DndContext,
@@ -32,12 +32,12 @@ import {
   Zap,
 } from "lucide-react";
 import { WorkspaceAvatar } from "../workspace/workspace-avatar";
-import { ActorAvatar } from "@multica/ui/components/common/actor-avatar";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@multica/ui/components/ui/collapsible";
+import { ActorAvatar } from "@aurion/ui/components/common/actor-avatar";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@aurion/ui/components/ui/collapsible";
 import { StatusIcon } from "../issues/components/status-icon";
-import type { IssueStatus } from "@multica/core/types";
-import { useIssueDraftStore } from "@multica/core/issues/stores/draft-store";
+import type { IssueStatus } from "@aurion/core/types";
+import { useIssueDraftStore } from "@aurion/core/issues/stores/draft-store";
 import {
   Sidebar,
   SidebarContent,
@@ -50,7 +50,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@multica/ui/components/ui/sidebar";
+} from "@aurion/ui/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,23 +59,23 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
+} from "@aurion/ui/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@multica/ui/components/ui/popover";
-import { useAuthStore } from "@multica/core/auth";
-import { useCurrentWorkspace, useWorkspacePaths, paths } from "@multica/core/paths";
-import { workspaceListOptions, myInvitationListOptions, workspaceKeys } from "@multica/core/workspace/queries";
+} from "@aurion/ui/components/ui/popover";
+import { useAuthStore } from "@aurion/core/auth";
+import { useCurrentWorkspace, useWorkspacePaths, paths } from "@aurion/core/paths";
+import { workspaceListOptions, myInvitationListOptions, workspaceKeys } from "@aurion/core/workspace/queries";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { inboxKeys, deduplicateInboxItems } from "@multica/core/inbox/queries";
-import { api } from "@multica/core/api";
-import { useModalStore } from "@multica/core/modals";
-import { useMyRuntimesNeedUpdate } from "@multica/core/runtimes/hooks";
-import { pinListOptions } from "@multica/core/pins/queries";
-import { useDeletePin, useReorderPins } from "@multica/core/pins/mutations";
-import type { PinnedItem } from "@multica/core/types";
+import { inboxKeys, deduplicateInboxItems } from "@aurion/core/inbox/queries";
+import { api } from "@aurion/core/api";
+import { useModalStore } from "@aurion/core/modals";
+import { useMyRuntimesNeedUpdate } from "@aurion/core/runtimes/hooks";
+import { pinListOptions } from "@aurion/core/pins/queries";
+import { useDeletePin, useReorderPins } from "@aurion/core/pins/mutations";
+import type { PinnedItem } from "@aurion/core/types";
 import { useLogout } from "../auth";
 
 // Nav items reference WorkspacePaths method names so they can be resolved
@@ -320,7 +320,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                     <SidebarMenuButton>
                       <WorkspaceAvatar name={workspace?.name ?? "M"} size="sm" />
                       <span className="flex-1 truncate font-medium">
-                        {workspace?.name ?? "Multica"}
+                        {workspace?.name ?? "Aurion"}
                       </span>
                       <ChevronDown className="size-3 text-muted-foreground" />
                     </SidebarMenuButton>

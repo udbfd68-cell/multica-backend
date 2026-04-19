@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../../layout/page-header";
 import { toast } from "sonner";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,8 +33,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@aurion/ui/components/ui/alert-dialog";
+import { Button } from "@aurion/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -44,24 +44,24 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@multica/ui/components/ui/resizable";
-import { Sheet, SheetContent } from "@multica/ui/components/ui/sheet";
-import { useIsMobile } from "@multica/ui/hooks/use-mobile";
+} from "@aurion/ui/components/ui/dropdown-menu";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@aurion/ui/components/ui/resizable";
+import { Sheet, SheetContent } from "@aurion/ui/components/ui/sheet";
+import { useIsMobile } from "@aurion/ui/hooks/use-mobile";
 import { ContentEditor, type ContentEditorRef, TitleEditor, useFileDropZone, FileDropOverlay } from "../../editor";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
+import { FileUploadButton } from "@aurion/ui/components/common/file-upload-button";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
-} from "@multica/ui/components/ui/tooltip";
-import { Popover, PopoverTrigger, PopoverContent } from "@multica/ui/components/ui/popover";
-import { Checkbox } from "@multica/ui/components/ui/checkbox";
-import { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@multica/ui/components/ui/command";
-import { AvatarGroup, AvatarGroupCount } from "@multica/ui/components/ui/avatar";
+} from "@aurion/ui/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@aurion/ui/components/ui/popover";
+import { Checkbox } from "@aurion/ui/components/ui/checkbox";
+import { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@aurion/ui/components/ui/command";
+import { AvatarGroup, AvatarGroupCount } from "@aurion/ui/components/ui/avatar";
 import { ActorAvatar } from "../../common/actor-avatar";
-import type { UpdateIssueRequest, IssueStatus, IssuePriority, TimelineEntry, Issue } from "@multica/core/types";
-import { ALL_STATUSES, STATUS_CONFIG, PRIORITY_ORDER, PRIORITY_CONFIG } from "@multica/core/issues/config";
+import type { UpdateIssueRequest, IssueStatus, IssuePriority, TimelineEntry, Issue } from "@aurion/core/types";
+import { ALL_STATUSES, STATUS_CONFIG, PRIORITY_ORDER, PRIORITY_CONFIG } from "@aurion/core/issues/config";
 import { StatusIcon, PriorityIcon, StatusPicker, PriorityPicker, DueDatePicker, AssigneePicker, canAssignAgent } from ".";
 import { ProjectPicker } from "../../projects/components/project-picker";
 import { CommentCard } from "./comment-card";
@@ -69,25 +69,25 @@ import { CommentInput } from "./comment-input";
 import { AgentLiveCard, TaskRunHistory } from "./agent-live-card";
 import { BacklogAgentHintDialog } from "./backlog-agent-hint-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
-import { useActorName } from "@multica/core/workspace/hooks";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { issueListOptions, issueDetailOptions, childIssuesOptions, issueUsageOptions } from "@multica/core/issues/queries";
-import { memberListOptions, agentListOptions } from "@multica/core/workspace/queries";
-import { useUpdateIssue, useDeleteIssue } from "@multica/core/issues/mutations";
-import { useRecentIssuesStore } from "@multica/core/issues/stores";
+import { useAuthStore } from "@aurion/core/auth";
+import { useCurrentWorkspace, useWorkspacePaths } from "@aurion/core/paths";
+import { useActorName } from "@aurion/core/workspace/hooks";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { issueListOptions, issueDetailOptions, childIssuesOptions, issueUsageOptions } from "@aurion/core/issues/queries";
+import { memberListOptions, agentListOptions } from "@aurion/core/workspace/queries";
+import { useUpdateIssue, useDeleteIssue } from "@aurion/core/issues/mutations";
+import { useRecentIssuesStore } from "@aurion/core/issues/stores";
 import { useIssueTimeline } from "../hooks/use-issue-timeline";
 import { useIssueReactions } from "../hooks/use-issue-reactions";
 import { useIssueSubscribers } from "../hooks/use-issue-subscribers";
-import { ReactionBar } from "@multica/ui/components/common/reaction-bar";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
-import { useModalStore } from "@multica/core/modals";
-import { timeAgo } from "@multica/core/utils";
-import { cn } from "@multica/ui/lib/utils";
-import { pinListOptions } from "@multica/core/pins";
-import { useCreatePin, useDeletePin } from "@multica/core/pins";
+import { ReactionBar } from "@aurion/ui/components/common/reaction-bar";
+import { useFileUpload } from "@aurion/core/hooks/use-file-upload";
+import { api } from "@aurion/core/api";
+import { useModalStore } from "@aurion/core/modals";
+import { timeAgo } from "@aurion/core/utils";
+import { cn } from "@aurion/ui/lib/utils";
+import { pinListOptions } from "@aurion/core/pins";
+import { useCreatePin, useDeletePin } from "@aurion/core/pins";
 
 import { ProgressRing } from "./progress-ring";
 
@@ -323,7 +323,7 @@ interface IssueDetailProps {
 // IssueDetail
 // ---------------------------------------------------------------------------
 
-export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layoutId = "multica_issue_detail_layout", highlightCommentId }: IssueDetailProps) {
+export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layoutId = "aurion_issue_detail_layout", highlightCommentId }: IssueDetailProps) {
   const id = issueId;
   const router = useNavigation();
   const user = useAuthStore((s) => s.user);
@@ -463,7 +463,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
         updates.assignee_type === "agent" &&
         updates.assignee_id &&
         issue.status === "backlog" &&
-        localStorage.getItem("multica:backlog-agent-hint-dismissed") !== "true"
+        localStorage.getItem("aurion:backlog-agent-hint-dismissed") !== "true"
       ) {
         setBacklogHintOpen(true);
       }
@@ -958,7 +958,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
               open={backlogHintOpen}
               onOpenChange={setBacklogHintOpen}
               onDismissPermanently={() => {
-                localStorage.setItem("multica:backlog-agent-hint-dismissed", "true");
+                localStorage.setItem("aurion:backlog-agent-hint-dismissed", "true");
               }}
               onMoveToTodo={() => {
                 updateIssueMutation.mutate(

@@ -9,7 +9,7 @@ import type {
   RuntimeDevice,
   MemberWithUser,
   CreateAgentRequest,
-} from "@multica/core/types";
+} from "@aurion/core/types";
 import {
   Dialog,
   DialogContent,
@@ -17,15 +17,15 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@multica/ui/components/ui/dialog";
+} from "@aurion/ui/components/ui/dialog";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@multica/ui/components/ui/popover";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
+} from "@aurion/ui/components/ui/popover";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Label } from "@aurion/ui/components/ui/label";
 import { toast } from "sonner";
 
 type RuntimeFilter = "mine" | "all";

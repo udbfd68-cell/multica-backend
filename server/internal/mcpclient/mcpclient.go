@@ -219,7 +219,7 @@ func (c *Client) connectStdio(ctx context.Context, cfg Config) error {
 			"protocolVersion": "2024-11-05",
 			"capabilities":   map[string]any{},
 			"clientInfo": map[string]any{
-				"name":    "multica-agent",
+				"name":    "aurion-agent",
 				"version": "1.0.0",
 			},
 		},

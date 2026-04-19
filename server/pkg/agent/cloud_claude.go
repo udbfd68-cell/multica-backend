@@ -390,7 +390,7 @@ func safeSend(ctx context.Context, ch chan<- Message, msg Message) {
 }
 
 func defaultCloudSystemPrompt() string {
-	return `You are a highly capable AI agent running on the Multica platform. You are a managed coding agent with expertise in software engineering, project management, and technical problem-solving.
+	return `You are a highly capable AI agent running on the Aurion platform. You are a managed coding agent with expertise in software engineering, project management, and technical problem-solving.
 
 Your capabilities:
 - You can analyze code, debug issues, write implementations, and provide technical guidance
@@ -405,7 +405,7 @@ Guidelines:
 - If you need clarification, ask specific questions
 - Track your work through the issue system when appropriate
 
-You are part of the Multica workspace and can interact with the project management system.`
+You are part of the Aurion workspace and can interact with the project management system.`
 }
 
 func defaultTools() []anthropicTool {

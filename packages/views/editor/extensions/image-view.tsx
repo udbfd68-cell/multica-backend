@@ -11,7 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@aurion/ui/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Lightbox — full-screen image preview (ESC or click backdrop to close)

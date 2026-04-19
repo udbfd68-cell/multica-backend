@@ -1,7 +1,7 @@
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@aurion/ui/lib/utils";
 
-export const githubUrl = "https://github.com/multica-ai/multica";
-export const twitterUrl = "https://x.com/MulticaAI";
+export const githubUrl = "https://github.com/aurion-ai/aurion";
+export const twitterUrl = "https://x.com/AurionAI";
 
 export function GitHubMark({ className }: { className?: string }) {
   return (

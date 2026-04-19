@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { WorkspaceSlugProvider, paths } from "@multica/core/paths";
+import { WorkspaceSlugProvider, paths } from "@aurion/core/paths";
 import {
   workspaceBySlugOptions,
   workspaceListOptions,
-} from "@multica/core/workspace";
-import { setCurrentWorkspace } from "@multica/core/platform";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceSeen } from "@multica/views/workspace/use-workspace-seen";
+} from "@aurion/core/workspace";
+import { setCurrentWorkspace } from "@aurion/core/platform";
+import { useAuthStore } from "@aurion/core/auth";
+import { useWorkspaceSeen } from "@aurion/views/workspace/use-workspace-seen";
 import { useTabStore } from "@/stores/tab-store";
 
 /**

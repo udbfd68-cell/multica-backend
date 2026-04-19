@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
 const mockMutate = vi.fn();
-vi.mock("@multica/core/workspace/mutations", () => ({
+vi.mock("@aurion/core/workspace/mutations", () => ({
   useCreateWorkspace: () => ({ mutate: mockMutate, isPending: false }),
 }));
 

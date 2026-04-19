@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useWorkspacePaths } from "@aurion/core/paths";
 import {
   inboxListOptions,
   deduplicateInboxItems,
-} from "@multica/core/inbox/queries";
+} from "@aurion/core/inbox/queries";
 import {
   useMarkInboxRead,
   useArchiveInbox,
@@ -16,7 +16,7 @@ import {
   useArchiveAllInbox,
   useArchiveAllReadInbox,
   useArchiveCompletedInbox,
-} from "@multica/core/inbox/mutations";
+} from "@aurion/core/inbox/mutations";
 import { IssueDetail } from "../../issues/components";
 import { useNavigation } from "../../navigation";
 import { toast } from "sonner";
@@ -29,22 +29,22 @@ import {
   ListChecks,
   ArrowLeft,
 } from "lucide-react";
-import type { InboxItem } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+import type { InboxItem } from "@aurion/core/types";
+import { Button } from "@aurion/ui/components/ui/button";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+} from "@aurion/ui/components/ui/resizable";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { useIsMobile } from "@multica/ui/hooks/use-mobile";
+} from "@aurion/ui/components/ui/dropdown-menu";
+import { useIsMobile } from "@aurion/ui/hooks/use-mobile";
 import { PageHeader } from "../../layout/page-header";
 import { InboxListItem, timeAgo } from "./inbox-list-item";
 import { typeLabels } from "./inbox-detail-label";
@@ -85,7 +85,7 @@ export function InboxPage() {
   }, [replace, wsPaths]);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_inbox_layout",
+    id: "aurion_inbox_layout",
   });
 
   const isMobile = useIsMobile();
@@ -216,7 +216,7 @@ export function InboxPage() {
       key={selected.id}
       issueId={selected.issue_id}
       defaultSidebarOpen={false}
-      layoutId="multica_inbox_issue_detail_layout"
+      layoutId="aurion_inbox_issue_detail_layout"
       highlightCommentId={selected.details?.comment_id ?? undefined}
       onDelete={() => {
         handleArchive(selected.id);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Cloud, Monitor } from "lucide-react";
-import type { Agent } from "@multica/core/types";
+import type { Agent } from "@aurion/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { statusConfig } from "../config";
 

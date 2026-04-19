@@ -5,15 +5,15 @@ import { createLogger } from "../logger";
 
 const logger = createLogger("chat.store");
 
-const AGENT_STORAGE_KEY = "multica:chat:selectedAgentId";
-const SESSION_STORAGE_KEY = "multica:chat:activeSessionId";
+const AGENT_STORAGE_KEY = "aurion:chat:selectedAgentId";
+const SESSION_STORAGE_KEY = "aurion:chat:activeSessionId";
 /** Drafts are stored as one JSON blob per workspace: { [sessionId]: text }. */
-const DRAFTS_KEY = "multica:chat:drafts";
+const DRAFTS_KEY = "aurion:chat:drafts";
 /** Placeholder sessionId for a chat that hasn't been created yet. */
 export const DRAFT_NEW_SESSION = "__new__";
-const CHAT_WIDTH_KEY = "multica:chat:width";
-const CHAT_HEIGHT_KEY = "multica:chat:height";
-const CHAT_EXPANDED_KEY = "multica:chat:expanded";
+const CHAT_WIDTH_KEY = "aurion:chat:width";
+const CHAT_HEIGHT_KEY = "aurion:chat:height";
+const CHAT_EXPANDED_KEY = "aurion:chat:expanded";
 
 function readDrafts(storage: StorageAdapter, key: string): Record<string, string> {
   const raw = storage.getItem(key);

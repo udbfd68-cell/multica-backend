@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@multica/ui/components/ui/button";
-import { Switch } from "@multica/ui/components/ui/switch";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Switch } from "@aurion/ui/components/ui/switch";
 import type { DaemonPrefs } from "../../../shared/daemon-types";
 
 function SettingRow({
@@ -79,8 +79,8 @@ export function DaemonSettingsTab() {
             {cliInstalled === null
               ? "Checking…"
               : cliInstalled
-                ? "multica CLI is installed and available in PATH."
-                : "multica CLI not found. Install it to enable daemon management."}
+                ? "aurion CLI is installed and available in PATH."
+                : "aurion CLI not found. Install it to enable daemon management."}
           </p>
           {cliInstalled === false && (
             <Button
@@ -89,7 +89,7 @@ export function DaemonSettingsTab() {
               className="mt-2"
               onClick={() =>
                 window.desktopAPI.openExternal(
-                  "https://github.com/multica-ai/multica#cli-installation",
+                  "https://github.com/aurion-ai/aurion#cli-installation",
                 )
               }
             >

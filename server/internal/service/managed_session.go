@@ -371,7 +371,7 @@ func buildDefaultAgentPrompt(a db.ManagedAgent) string {
 	}
 	return fmt.Sprintf(`You are %s, %s.
 
-You are running as a managed agent on the Multica platform. You have access to tools for:
+You are running as a managed agent on the Aurion platform. You have access to tools for:
 - Managing issues (create, list, update, comment)
 - File operations (read, write, list)
 - Shell command execution

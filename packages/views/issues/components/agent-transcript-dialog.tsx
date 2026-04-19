@@ -17,12 +17,12 @@ import {
   Cloud,
   Cpu,
 } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@multica/ui/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@multica/ui/components/ui/collapsible";
+import { cn } from "@aurion/ui/lib/utils";
+import { Dialog, DialogContent, DialogTitle } from "@aurion/ui/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aurion/ui/components/ui/collapsible";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { api } from "@multica/core/api";
-import type { AgentTask, Agent, AgentRuntime } from "@multica/core/types/agent";
+import { api } from "@aurion/core/api";
+import type { AgentTask, Agent, AgentRuntime } from "@aurion/core/types/agent";
 import { redactSecrets } from "../utils/redact";
 
 // ─── Types ──────────────────────────────────────────────────────────────────

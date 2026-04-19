@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { IssuePriority, UpdateIssueRequest } from "@multica/core/types";
-import { PRIORITY_ORDER, PRIORITY_CONFIG } from "@multica/core/issues/config";
+import type { IssuePriority, UpdateIssueRequest } from "@aurion/core/types";
+import { PRIORITY_ORDER, PRIORITY_CONFIG } from "@aurion/core/issues/config";
 import { PriorityIcon } from "../priority-icon";
 import { PropertyPicker, PickerItem } from "./property-picker";
 

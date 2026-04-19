@@ -1,5 +1,5 @@
-appId: ai.multica.desktop
-productName: Multica
+appId: studio.aurion.desktop
+productName: Aurion
 directories:
   buildResources: build
 files:
@@ -9,9 +9,9 @@ files:
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
 protocols:
-  - name: Multica
+  - name: Aurion
     schemes:
-      - multica
+      - aurion
 asarUnpack:
   - resources/**
 mac:
@@ -19,16 +19,16 @@ mac:
   target:
     - dmg
     - zip
-  # Hardcoded name avoids the `@multica/desktop-*` subdirectory that
+  # Hardcoded name avoids the `@aurion/desktop-*` subdirectory that
   # `${name}` produces for scoped package names.
-  artifactName: multica-desktop-${version}-${arch}.${ext}
+  artifactName: aurion-desktop-${version}-${arch}.${ext}
   # Notarize via notarytool. Requires APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD
   # + APPLE_TEAM_ID env vars at package time. Non-mac contributors are
   # unaffected because `pnpm package` already requires the Developer ID
   # signing cert — notarization is a strict superset.
   notarize: true
 dmg:
-  artifactName: multica-desktop-${version}-${arch}.${ext}
+  artifactName: aurion-desktop-${version}-${arch}.${ext}
 linux:
   target:
     - AppImage
@@ -40,8 +40,8 @@ win:
   artifactName: ${name}-${version}-setup.${ext}
 publish:
   provider: github
-  owner: multica-ai
-  repo: multica
+  owner: aurion-ai
+  repo: aurion
   # Align with our CLI release flow which pre-creates a *published* GitHub
   # Release via `gh release create`. The electron-builder default of
   # `releaseType: draft` conflicts with `existingType=release` and causes

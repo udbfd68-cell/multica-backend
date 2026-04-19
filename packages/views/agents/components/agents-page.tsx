@@ -3,21 +3,21 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 import { Bot, Plus, Archive } from "lucide-react";
-import type { CreateAgentRequest, UpdateAgentRequest } from "@multica/core/types";
+import type { CreateAgentRequest, UpdateAgentRequest } from "@aurion/core/types";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@aurion/ui/components/ui/resizable";
+import { Button } from "@aurion/ui/components/ui/button";
 import { toast } from "sonner";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { api } from "@multica/core/api";
-import { useAuthStore } from "@multica/core/auth";
-import { runtimeListOptions } from "@multica/core/runtimes/queries";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
+import { api } from "@aurion/core/api";
+import { useAuthStore } from "@aurion/core/auth";
+import { runtimeListOptions } from "@aurion/core/runtimes/queries";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { agentListOptions, memberListOptions, workspaceKeys } from "@multica/core/workspace/queries";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { agentListOptions, memberListOptions, workspaceKeys } from "@aurion/core/workspace/queries";
 import { PageHeader } from "../../layout/page-header";
 import { CreateAgentDialog } from "./create-agent-dialog";
 import { AgentListItem } from "./agent-list-item";
@@ -34,7 +34,7 @@ export function AgentsPage() {
   const { data: runtimes = [], isLoading: runtimesLoading } = useQuery(runtimeListOptions(wsId));
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_agents_layout",
+    id: "aurion_agents_layout",
   });
 
   const filteredAgents = useMemo(

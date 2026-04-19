@@ -288,7 +288,7 @@ git commit -m "perf(api): omit description from list issues response to reduce p
 **Confirmation:** With Task 3 implemented:
 - **Description files:** Agent reads issue description markdown → finds CDN URLs directly. No attachment record needed.
 - **Comment files:** Agent uses `GET /api/issues/{id}` → `attachments` array for issue-linked files, plus comment content markdown URLs.
-- **CLI attachment download:** `multica attachment download <id>` works for files that DO have attachment records (comment uploads).
+- **CLI attachment download:** `aurion attachment download <id>` works for files that DO have attachment records (comment uploads).
 - **No redundancy:** Two paths serve different purposes — markdown URLs for inline content, attachment records for standalone files.
 
 No code change required. This task is resolved by Task 3.

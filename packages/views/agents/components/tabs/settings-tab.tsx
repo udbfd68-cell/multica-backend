@@ -9,18 +9,18 @@ import {
   Camera,
   ChevronDown,
 } from "lucide-react";
-import type { Agent, AgentVisibility, RuntimeDevice, MemberWithUser } from "@multica/core/types";
+import type { Agent, AgentVisibility, RuntimeDevice, MemberWithUser } from "@aurion/core/types";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@multica/ui/components/ui/popover";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
+} from "@aurion/ui/components/ui/popover";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Label } from "@aurion/ui/components/ui/label";
 import { toast } from "sonner";
-import { api } from "@multica/core/api";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
+import { api } from "@aurion/core/api";
+import { useFileUpload } from "@aurion/core/hooks/use-file-upload";
 import { ActorAvatar } from "../../../common/actor-avatar";
 import { ProviderLogo } from "../../../runtimes/components/provider-logo";
 

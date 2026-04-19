@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@aurion/ui/lib/utils";
 import { useTabHistory } from "@/hooks/use-tab-history";
 import { useActiveTitleSync } from "@/hooks/use-tab-sync";
 import { useTabStore, resolveRouteIcon } from "@/stores/tab-store";
@@ -8,13 +8,13 @@ import {
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
-} from "@multica/ui/components/ui/sidebar";
-import { ModalRegistry } from "@multica/views/modals/registry";
-import { AppSidebar } from "@multica/views/layout";
-import { SearchCommand, SearchTrigger } from "@multica/views/search";
-import { ChatFab, ChatWindow } from "@multica/views/chat";
-import { WorkspaceSlugProvider } from "@multica/core/paths";
-import { getCurrentSlug, subscribeToCurrentSlug } from "@multica/core/platform";
+} from "@aurion/ui/components/ui/sidebar";
+import { ModalRegistry } from "@aurion/views/modals/registry";
+import { AppSidebar } from "@aurion/views/layout";
+import { SearchCommand, SearchTrigger } from "@aurion/views/search";
+import { ChatFab, ChatWindow } from "@aurion/views/chat";
+import { WorkspaceSlugProvider } from "@aurion/core/paths";
+import { getCurrentSlug, subscribeToCurrentSlug } from "@aurion/core/platform";
 import { DesktopNavigationProvider } from "@/platform/navigation";
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
@@ -91,8 +91,8 @@ function useInternalLinkHandler() {
       const tabId = store.openTab(path, path, icon);
       store.setActiveTab(tabId);
     };
-    window.addEventListener("multica:navigate", handler);
-    return () => window.removeEventListener("multica:navigate", handler);
+    window.addEventListener("aurion:navigate", handler);
+    return () => window.removeEventListener("aurion:navigate", handler);
   }, []);
 }
 

@@ -157,12 +157,12 @@ func (d *Daemon) deregisterRuntimes() {
 }
 
 // resolveAuth loads the auth token from the CLI config for the active profile.
-// It also checks the MULTICA_AUTH_TOKEN env var for headless/container deployments.
+// It also checks the AURION_AUTH_TOKEN env var for headless/container deployments.
 func (d *Daemon) resolveAuth() error {
 	// Check env var first (for Docker / headless environments)
-	if envToken := os.Getenv("MULTICA_AUTH_TOKEN"); envToken != "" {
+	if envToken := os.Getenv("AURION_AUTH_TOKEN"); envToken != "" {
 		d.client.SetToken(envToken)
-		d.logger.Info("authenticated via MULTICA_AUTH_TOKEN env var")
+		d.logger.Info("authenticated via AURION_AUTH_TOKEN env var")
 		return nil
 	}
 
@@ -171,12 +171,12 @@ func (d *Daemon) resolveAuth() error {
 		return fmt.Errorf("load CLI config: %w", err)
 	}
 	if cfg.Token == "" {
-		loginHint := "'multica login'"
+		loginHint := "'aurion login'"
 		if d.cfg.Profile != "" {
-			loginHint = fmt.Sprintf("'multica login --profile %s'", d.cfg.Profile)
+			loginHint = fmt.Sprintf("'aurion login --profile %s'", d.cfg.Profile)
 		}
-		d.logger.Warn("not authenticated — run " + loginHint + " to authenticate, or set MULTICA_AUTH_TOKEN env var")
-		return fmt.Errorf("not authenticated: run %s first, or set MULTICA_AUTH_TOKEN", loginHint)
+		d.logger.Warn("not authenticated — run " + loginHint + " to authenticate, or set AURION_AUTH_TOKEN env var")
+		return fmt.Errorf("not authenticated: run %s first, or set AURION_AUTH_TOKEN", loginHint)
 	}
 	d.client.SetToken(cfg.Token)
 	d.logger.Info("authenticated")
@@ -603,7 +603,7 @@ func (d *Daemon) handleUpdate(ctx context.Context, runtimeID string, update *Pen
 		d.logger.Info("refusing CLI self-update: daemon is managed by Desktop", "runtime_id", runtimeID, "update_id", update.ID)
 		d.client.ReportUpdateResult(ctx, runtimeID, update.ID, map[string]any{
 			"status": "failed",
-			"error":  "CLI is managed by Multica Desktop — update the Desktop app to upgrade the CLI",
+			"error":  "CLI is managed by Aurion Desktop — update the Desktop app to upgrade the CLI",
 		})
 		return
 	}
@@ -661,7 +661,7 @@ func (d *Daemon) handleUpdate(ctx context.Context, runtimeID string, update *Pen
 }
 
 // triggerRestart initiates a graceful daemon restart after a successful CLI update.
-// For brew installs, it keeps the symlink path (e.g. /opt/homebrew/bin/multica)
+// For brew installs, it keeps the symlink path (e.g. /opt/homebrew/bin/aurion)
 // so the restarted daemon picks up the new Cellar version automatically.
 // For non-brew installs, it resolves to the absolute path of the replaced binary.
 // The caller (cmd_daemon.go) checks RestartBinary() and launches the new process.
@@ -909,7 +909,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 
 	// Prepare isolated execution environment.
 	// Repos are passed as metadata only — the agent checks them out on demand
-	// via `multica repo checkout <url>`.
+	// via `aurion repo checkout <url>`.
 	taskCtx := execenv.TaskContextForEnv{
 		IssueID:           task.IssueID,
 		TriggerCommentID:  task.TriggerCommentID,
@@ -954,20 +954,20 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	prompt := BuildPrompt(task)
 
 	// Pass the daemon's auth credentials and context so the spawned agent CLI
-	// can call the Multica API and the local daemon (e.g. `multica repo checkout`).
+	// can call the Aurion API and the local daemon (e.g. `aurion repo checkout`).
 	agentEnv := map[string]string{
-		"MULTICA_TOKEN":        d.client.Token(),
-		"MULTICA_SERVER_URL":   d.cfg.ServerBaseURL,
-		"MULTICA_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
-		"MULTICA_WORKSPACE_ID": task.WorkspaceID,
-		"MULTICA_AGENT_NAME":   agentName,
-		"MULTICA_AGENT_ID":     task.AgentID,
-		"MULTICA_TASK_ID":      task.ID,
+		"AURION_TOKEN":        d.client.Token(),
+		"AURION_SERVER_URL":   d.cfg.ServerBaseURL,
+		"AURION_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
+		"AURION_WORKSPACE_ID": task.WorkspaceID,
+		"AURION_AGENT_NAME":   agentName,
+		"AURION_AGENT_ID":     task.AgentID,
+		"AURION_TASK_ID":      task.ID,
 	}
-	// Ensure the multica CLI is on PATH inside the agent's environment.
+	// Ensure the aurion CLI is on PATH inside the agent's environment.
 	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not
 	// inherit the daemon's PATH. Prepend the directory of the running
-	// multica binary so that `multica` commands in the agent always resolve.
+	// aurion binary so that `aurion` commands in the agent always resolve.
 	if selfBin, err := os.Executable(); err == nil {
 		binDir := filepath.Dir(selfBin)
 		agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
@@ -1349,7 +1349,7 @@ func convertSkillsForEnv(skills []SkillData) []execenv.SkillContextForEnv {
 // daemon-internal variables and critical system paths.
 func isBlockedEnvKey(key string) bool {
 	upper := strings.ToUpper(key)
-	if strings.HasPrefix(upper, "MULTICA_") {
+	if strings.HasPrefix(upper, "AURION_") {
 		return true
 	}
 	switch upper {

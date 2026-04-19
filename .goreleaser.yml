@@ -1,12 +1,12 @@
 version: 2
 
-project_name: multica
+project_name: aurion
 
 builds:
-  - id: multica
-    main: ./cmd/multica
+  - id: aurion
+    main: ./cmd/aurion
     dir: server
-    binary: multica
+    binary: aurion
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
@@ -47,17 +47,17 @@ changelog:
       - "^chore:"
 
 brews:
-  - name: multica
+  - name: aurion
     repository:
-      owner: multica-ai
+      owner: aurion-ai
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/multica-ai/multica"
-    description: "Multica CLI — local agent runtime and management tool for the Multica platform"
+    homepage: "https://github.com/aurion-ai/aurion"
+    description: "Aurion CLI — local agent runtime and management tool for the Aurion platform"
     license: "Apache-2.0"
     install: |
-      bin.install "multica"
+      bin.install "aurion"
     test: |
-      system "#{bin}/multica", "version"
+      system "#{bin}/aurion", "version"

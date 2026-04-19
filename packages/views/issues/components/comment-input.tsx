@@ -2,11 +2,11 @@
 
 import { useRef, useState, useCallback } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@aurion/ui/components/ui/button";
 import { ContentEditor, type ContentEditorRef, useFileDropZone, FileDropOverlay } from "../../editor";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
+import { FileUploadButton } from "@aurion/ui/components/common/file-upload-button";
+import { useFileUpload } from "@aurion/core/hooks/use-file-upload";
+import { api } from "@aurion/core/api";
 
 interface CommentInputProps {
   issueId: string;

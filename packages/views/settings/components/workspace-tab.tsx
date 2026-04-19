@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Save, LogOut } from "lucide-react";
-import { Input } from "@multica/ui/components/ui/input";
-import { Textarea } from "@multica/ui/components/ui/textarea";
-import { Label } from "@multica/ui/components/ui/label";
-import { Button } from "@multica/ui/components/ui/button";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Textarea } from "@aurion/ui/components/ui/textarea";
+import { Label } from "@aurion/ui/components/ui/label";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Card, CardContent } from "@aurion/ui/components/ui/card";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,22 +16,22 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@aurion/ui/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { useLeaveWorkspace, useDeleteWorkspace } from "@multica/core/workspace/mutations";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useCurrentWorkspace } from "@multica/core/paths";
+import { useAuthStore } from "@aurion/core/auth";
+import { useLeaveWorkspace, useDeleteWorkspace } from "@aurion/core/workspace/mutations";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useCurrentWorkspace } from "@aurion/core/paths";
 import {
   memberListOptions,
   workspaceKeys,
   workspaceListOptions,
-} from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
-import { paths } from "@multica/core/paths";
-import { setCurrentWorkspace } from "@multica/core/platform";
-import type { Workspace } from "@multica/core/types";
+} from "@aurion/core/workspace/queries";
+import { api } from "@aurion/core/api";
+import { paths } from "@aurion/core/paths";
+import { setCurrentWorkspace } from "@aurion/core/platform";
+import type { Workspace } from "@aurion/core/types";
 import { useNavigation } from "../../navigation";
 import { DeleteWorkspaceDialog } from "./delete-workspace-dialog";
 

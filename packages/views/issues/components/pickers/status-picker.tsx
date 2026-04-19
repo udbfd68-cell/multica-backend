@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { IssueStatus, UpdateIssueRequest } from "@multica/core/types";
-import { ALL_STATUSES, STATUS_CONFIG } from "@multica/core/issues/config";
+import type { IssueStatus, UpdateIssueRequest } from "@aurion/core/types";
+import { ALL_STATUSES, STATUS_CONFIG } from "@aurion/core/issues/config";
 import { StatusIcon } from "../status-icon";
 import { PropertyPicker, PickerItem } from "./property-picker";
 

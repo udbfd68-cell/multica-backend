@@ -3,18 +3,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Agent, AgentTask, Issue } from "@multica/core/types";
+import type { Agent, AgentTask, Issue } from "@aurion/core/types";
 
 const mockListAgentTasks = vi.hoisted(() => vi.fn());
 const mockListIssues = vi.hoisted(() => vi.fn());
 
-vi.mock("@multica/core/hooks", () => ({
+vi.mock("@aurion/core/hooks", () => ({
   useWorkspaceId: () => "ws-1",
 }));
 
-vi.mock("@multica/core/paths", async () => {
-  const actual = await vi.importActual<typeof import("@multica/core/paths")>(
-    "@multica/core/paths",
+vi.mock("@aurion/core/paths", async () => {
+  const actual = await vi.importActual<typeof import("@aurion/core/paths")>(
+    "@aurion/core/paths",
   );
   return {
     ...actual,
@@ -22,7 +22,7 @@ vi.mock("@multica/core/paths", async () => {
   };
 });
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@aurion/core/api", () => ({
   api: {
     listAgentTasks: (...args: unknown[]) => mockListAgentTasks(...args),
     listIssues: (...args: unknown[]) => mockListIssues(...args),

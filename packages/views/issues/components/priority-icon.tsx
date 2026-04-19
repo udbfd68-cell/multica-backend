@@ -1,5 +1,5 @@
-import type { IssuePriority } from "@multica/core/types";
-import { PRIORITY_CONFIG } from "@multica/core/issues/config";
+import type { IssuePriority } from "@aurion/core/types";
+import { PRIORITY_CONFIG } from "@aurion/core/issues/config";
 
 export function PriorityIcon({
   priority,

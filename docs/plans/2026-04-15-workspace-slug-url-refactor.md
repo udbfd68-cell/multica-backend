@@ -18,9 +18,9 @@
 
 Current state (measured, not claimed):
 
-- Workspace identity lives in 4 synchronized copies: `localStorage["multica_workspace_id"]`, `useWorkspaceStore.workspace`, `api._workspaceId`, `_currentWsId` module var in `packages/core/platform/workspace-storage.ts`. Any hand-synchronization drift = bug.
+- Workspace identity lives in 4 synchronized copies: `localStorage["aurion_workspace_id"]`, `useWorkspaceStore.workspace`, `api._workspaceId`, `_currentWsId` module var in `packages/core/platform/workspace-storage.ts`. Any hand-synchronization drift = bug.
 - URL `/issues/abc` has no workspace marker. A link shared across workspaces opens with the receiver's cached workspace → 404 or wrong data.
-- `localStorage["multica_workspace_id"]` is a single global key. Two tabs on different workspaces overwrite each other on refresh.
+- `localStorage["aurion_workspace_id"]` is a single global key. Two tabs on different workspaces overwrite each other on refresh.
 - `useCreateWorkspace` / `useLeaveWorkspace` / `useDeleteWorkspace` call `switchWorkspace` / `hydrateWorkspace` inside `onSuccess`. This causes observable UX bugs (MUL-727 flash, MUL-728 no-navigate, MUL-820 sidebar Join).
 - Mobile has no workspace switcher because switching lives only in sidebar UI, not in the URL (MUL-509).
 
@@ -38,7 +38,7 @@ Issues this PR closes: **MUL-43**, **MUL-509**, **MUL-723**, **MUL-727**, **MUL-
 | Mechanical replace (path callsites) | ~20 | `push("/issues")` → `push(paths.issues())` etc. |
 | Backend | 1 | Reserved-slug validation in workspace handler |
 | E2E tests | ~20-30 assertions | URL assertions updated |
-| Deleted references to `multica_workspace_id` | ~10 | After URL becomes source of truth |
+| Deleted references to `aurion_workspace_id` | ~10 | After URL becomes source of truth |
 
 ---
 
@@ -50,7 +50,7 @@ Issues this PR closes: **MUL-43**, **MUL-509**, **MUL-723**, **MUL-727**, **MUL-
 User action → switchWorkspace(ws) → mutates:
   1. api._workspaceId
   2. _currentWsId (module var)
-  3. localStorage["multica_workspace_id"]
+  3. localStorage["aurion_workspace_id"]
   4. useWorkspaceStore.workspace
   5. Rehydrates all workspace-namespaced persist stores
 → push("/issues")  [URL does not change workspace]
@@ -71,7 +71,7 @@ User action → push(paths.workspace(newSlug).issues())
 ```
 
 **Invariants enforced:**
-- No file reads `localStorage["multica_workspace_id"]` after this PR — it stops being written too.
+- No file reads `localStorage["aurion_workspace_id"]` after this PR — it stops being written too.
 - `useWorkspaceStore.workspace` is removed. Callers use `useCurrentWorkspace()` which reads URL + React Query.
 - `switchWorkspace` / `hydrateWorkspace` removed. Workspace transitions = navigation only.
 - Every path expression in shared code goes through `paths.*` builder. No hardcoded `/issues` strings outside the builder module.
@@ -262,7 +262,7 @@ describe("isGlobalPath", () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-pnpm --filter @multica/core exec vitest run paths/paths.test.ts
+pnpm --filter @aurion/core exec vitest run paths/paths.test.ts
 ```
 
 Expected: FAIL (module not found)
@@ -375,7 +375,7 @@ export { RESERVED_SLUGS, isReservedSlug } from "./reserved-slugs";
 
 **Step 6: Export from core root**
 
-Modify `packages/core/package.json` exports (if there's an explicit exports map; otherwise this is consumed via `@multica/core/paths`).
+Modify `packages/core/package.json` exports (if there's an explicit exports map; otherwise this is consumed via `@aurion/core/paths`).
 
 Also add to any root barrel if present. Check `packages/core/index.ts`:
 
@@ -388,7 +388,7 @@ If path exports are listed there, add `export * from "./paths";`.
 **Step 7: Run tests**
 
 ```bash
-pnpm --filter @multica/core exec vitest run paths/paths.test.ts
+pnpm --filter @aurion/core exec vitest run paths/paths.test.ts
 ```
 
 Expected: PASS
@@ -482,7 +482,7 @@ describe("useCurrentWorkspace", () => {
 **Step 3: Run test to verify failure**
 
 ```bash
-pnpm --filter @multica/core exec vitest run paths/hooks.test.tsx
+pnpm --filter @aurion/core exec vitest run paths/hooks.test.tsx
 ```
 
 Expected: FAIL (module not found)
@@ -575,7 +575,7 @@ export {
 **Step 6: Run tests**
 
 ```bash
-pnpm --filter @multica/core exec vitest run paths/
+pnpm --filter @aurion/core exec vitest run paths/
 ```
 
 Expected: PASS
@@ -702,9 +702,9 @@ The UI callers (create-workspace modal, settings page) handle navigation in thei
 
 Modify `packages/core/platform/auth-initializer.tsx`:
 
-- Delete: `const wsId = storage.getItem("multica_workspace_id");`
+- Delete: `const wsId = storage.getItem("aurion_workspace_id");`
 - Delete: `useWorkspaceStore.getState().hydrateWorkspace(wsList, wsId);` (both branches)
-- Delete: `storage.removeItem("multica_workspace_id");` (in catch block)
+- Delete: `storage.removeItem("aurion_workspace_id");` (in catch block)
 
 The initializer just loads user + workspace list into React Query. Workspace selection now happens in the URL layout.
 
@@ -762,7 +762,7 @@ export function AuthInitializer({
       return;
     }
 
-    const token = storage.getItem("multica_token");
+    const token = storage.getItem("aurion_token");
     if (!token) {
       onLogout?.();
       useAuthStore.setState({ isLoading: false });
@@ -780,7 +780,7 @@ export function AuthInitializer({
       .catch((err) => {
         logger.error("auth init failed", err);
         api.setToken(null);
-        storage.removeItem("multica_token");
+        storage.removeItem("aurion_token");
         onLogout?.();
         useAuthStore.setState({ user: null, isLoading: false });
       });
@@ -893,14 +893,14 @@ git commit -m "refactor(web): move dashboard routes under [workspaceSlug] segmen
 import { use, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
-import { api } from "@multica/core/api";
+import { api } from "@aurion/core/api";
 import {
   WorkspaceSlugProvider,
   workspaceBySlugOptions,
-} from "@multica/core/paths";
-import { useWorkspaceStore } from "@multica/core/workspace";
-import { setCurrentWorkspaceId, rehydrateAllWorkspaceStores } from "@multica/core/platform/workspace-storage";
-import { useAuthStore } from "@multica/core/auth";
+} from "@aurion/core/paths";
+import { useWorkspaceStore } from "@aurion/core/workspace";
+import { setCurrentWorkspaceId, rehydrateAllWorkspaceStores } from "@aurion/core/platform/workspace-storage";
+import { useAuthStore } from "@aurion/core/auth";
 
 export default function WorkspaceLayout({
   children,
@@ -948,7 +948,7 @@ export default function WorkspaceLayout({
 **Step 2: Verify route compiles**
 
 ```bash
-pnpm --filter @multica/web build 2>&1 | head -40
+pnpm --filter @aurion/web build 2>&1 | head -40
 ```
 
 Expected: may fail because of Phase 3 missing pieces, but the route file itself should be valid. Check for syntax errors.
@@ -1026,7 +1026,7 @@ export function middleware(req: NextRequest) {
 
   // Check auth cookie (HttpOnly, set by /login). We can't read its value,
   // but we can check presence — if there's no session cookie, show landing.
-  const hasSession = req.cookies.has("multica_session");
+  const hasSession = req.cookies.has("aurion_session");
   if (!hasSession) return NextResponse.next();
 
   // Logged-in user at /: redirect to last workspace's issues page.
@@ -1050,10 +1050,10 @@ export const config = {
 **Step 2: Confirm auth cookie name**
 
 ```bash
-grep -rn "multica_session\|setLoggedInCookie\|cookie" apps/web/features/auth/
+grep -rn "aurion_session\|setLoggedInCookie\|cookie" apps/web/features/auth/
 ```
 
-Find the actual cookie name. Update `middleware.ts` if it's different (likely `multica_logged_in` or similar — the cookie only needs to indicate presence, not carry auth).
+Find the actual cookie name. Update `middleware.ts` if it's different (likely `aurion_logged_in` or similar — the cookie only needs to indicate presence, not carry auth).
 
 **Step 3: Commit**
 
@@ -1079,10 +1079,10 @@ For users who log in for the first time (no cookie yet), the root page's landing
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@multica/core/auth";
+import { useAuthStore } from "@aurion/core/auth";
 import { useQuery } from "@tanstack/react-query";
-import { workspaceListOptions } from "@multica/core/workspace";
-import { paths } from "@multica/core/paths";
+import { workspaceListOptions } from "@aurion/core/workspace";
+import { paths } from "@aurion/core/paths";
 
 function useRedirectLoggedIn() {
   const router = useRouter();
@@ -1350,11 +1350,11 @@ git commit -m "refactor(views): search/modals/editor use path builder"
 - Line 24, 28: same `useCurrentWorkspace()` replacement
 
 `auth/callback/page.tsx`:
-- Line 67: `localStorage.getItem("multica_workspace_id")` → DELETE
+- Line 67: `localStorage.getItem("aurion_workspace_id")` → DELETE
 - Line 71: after auth success, navigate to `paths.workspace(wsList[0].slug).issues()` (or `paths.onboarding()` if list is empty) — pick first workspace as default landing. The middleware cookie will update on next visit.
 
 `(auth)/login/page.tsx`:
-- Line 32: `localStorage.getItem("multica_workspace_id")` → DELETE
+- Line 32: `localStorage.getItem("aurion_workspace_id")` → DELETE
 - Login success redirect: same logic as auth callback.
 
 **Commit:**
@@ -1370,7 +1370,7 @@ git commit -m "refactor(auth-flow): remove localStorage workspace id, use URL na
 
 **File:** `packages/views/editor/utils/link-handler.ts`
 
-When a markdown link like `[foo](/issues/abc)` is clicked inside an issue's content, it dispatches `multica:navigate` with path `/issues/abc`. After the refactor, this is not a valid route — it needs workspace slug.
+When a markdown link like `[foo](/issues/abc)` is clicked inside an issue's content, it dispatches `aurion:navigate` with path `/issues/abc`. After the refactor, this is not a valid route — it needs workspace slug.
 
 **Change:**
 
@@ -1379,9 +1379,9 @@ When a markdown link like `[foo](/issues/abc)` is clicked inside an issue's cont
 Simplest: change `openLink` to accept a current slug and prepend:
 
 ```ts
-import { paths, isGlobalPath } from "@multica/core/paths";
+import { paths, isGlobalPath } from "@aurion/core/paths";
 
-/** Open a link — internal paths dispatch multica:navigate, external open new tab. */
+/** Open a link — internal paths dispatch aurion:navigate, external open new tab. */
 export function openLink(href: string, currentSlug?: string | null): void {
   if (href.startsWith("/")) {
     // Workspace-scoped path without slug → prepend current slug
@@ -1395,7 +1395,7 @@ export function openLink(href: string, currentSlug?: string | null): void {
       }
     }
     window.dispatchEvent(
-      new CustomEvent("multica:navigate", { detail: { path } }),
+      new CustomEvent("aurion:navigate", { detail: { path } }),
     );
   } else {
     window.open(href, "_blank", "noopener,noreferrer");
@@ -1456,7 +1456,7 @@ export const useNavigationStore = create<NavigationState>()(
       },
     }),
     {
-      name: "multica_navigation",
+      name: "aurion_navigation",
       storage: createJSONStorage(() => createWorkspaceAwareStorage(defaultStorage)),
       partialize: (state) => ({ lastPath: state.lastPath }),
     }
@@ -1469,7 +1469,7 @@ registerForWorkspaceRehydration(() => useNavigationStore.persist.rehydrate());
 Also update `packages/core/platform/storage-cleanup.ts`:
 
 ```ts
-// Add "multica_navigation" to WORKSPACE_SCOPED_KEYS array
+// Add "aurion_navigation" to WORKSPACE_SCOPED_KEYS array
 ```
 
 **Commit:**
@@ -1564,16 +1564,16 @@ git commit -m "refactor(desktop/tabs): workspace-aware tab paths"
 
 **File:** `apps/desktop/src/renderer/src/platform/navigation.tsx`
 
-Current (line 67, 110): `getShareableUrl: (path: string) => \`https://www.multica.ai${path}\``
+Current (line 67, 110): `getShareableUrl: (path: string) => \`https://www.aurion.studio${path}\``
 
 After the refactor, `path` already contains slug (because the tab's memory router uses slug), so the existing implementation is correct. **No change needed.**
 
-However, double-check by testing: open an issue, click "copy link", paste it. Verify it's `https://www.multica.ai/{slug}/issues/{id}`.
+However, double-check by testing: open an issue, click "copy link", paste it. Verify it's `https://www.aurion.studio/{slug}/issues/{id}`.
 
 If the web URL domain is configurable (e.g. different staging domains), extract the domain to an env var:
 
 ```tsx
-const WEB_URL = import.meta.env.VITE_WEB_URL || "https://www.multica.ai";
+const WEB_URL = import.meta.env.VITE_WEB_URL || "https://www.aurion.studio";
 // ...
 getShareableUrl: (path: string) => `${WEB_URL}${path}`,
 ```
@@ -1597,7 +1597,7 @@ Lines 29-31 currently do:
 
 ```tsx
 const wsList = await api.listWorkspaces();
-const lastWsId = localStorage.getItem("multica_workspace_id");
+const lastWsId = localStorage.getItem("aurion_workspace_id");
 useWorkspaceStore.getState().hydrateWorkspace(wsList, lastWsId);
 ```
 
@@ -1626,12 +1626,12 @@ git commit -m "refactor(desktop): URL-driven workspace, remove localStorage read
 
 ## Phase 5: Verification & Cleanup (Tasks 23–27)
 
-### Task 23: Remove all `multica_workspace_id` references
+### Task 23: Remove all `aurion_workspace_id` references
 
 Run:
 
 ```bash
-grep -rn "multica_workspace_id" packages/ apps/ | grep -v ".test." | grep -v "docs/plans/"
+grep -rn "aurion_workspace_id" packages/ apps/ | grep -v ".test." | grep -v "docs/plans/"
 ```
 
 Each result should be gone or replaced. Verify:
@@ -1648,7 +1648,7 @@ Commit cleanups:
 
 ```bash
 git add -A
-git commit -m "chore: remove all multica_workspace_id references"
+git commit -m "chore: remove all aurion_workspace_id references"
 ```
 
 ---
@@ -1752,7 +1752,7 @@ Before pushing to test environment, verify each scenario manually in local dev:
 - [ ] Mobile view → workspace switching works (even without sidebar open)
 - [ ] Markdown link `[foo](/issues/abc)` in comment → navigates within current workspace
 - [ ] Desktop: open multiple tabs, each with workspace path → tabs persist across app restart
-- [ ] Desktop: copy-link generates `https://www.multica.ai/{slug}/issues/{id}`
+- [ ] Desktop: copy-link generates `https://www.aurion.studio/{slug}/issues/{id}`
 - [ ] Back/forward buttons → history is preserved correctly
 
 ---

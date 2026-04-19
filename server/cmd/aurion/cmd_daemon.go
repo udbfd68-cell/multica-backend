@@ -59,13 +59,13 @@ var daemonLogsCmd = &cobra.Command{
 func init() {
 	f := daemonStartCmd.Flags()
 	f.Bool("foreground", false, "Run in the foreground instead of background")
-	f.String("daemon-id", "", "Unique daemon identifier (env: MULTICA_DAEMON_ID)")
-	f.String("device-name", "", "Human-readable device name (env: MULTICA_DAEMON_DEVICE_NAME)")
-	f.String("runtime-name", "", "Runtime display name (env: MULTICA_AGENT_RUNTIME_NAME)")
-	f.Duration("poll-interval", 0, "Task poll interval (env: MULTICA_DAEMON_POLL_INTERVAL)")
-	f.Duration("heartbeat-interval", 0, "Heartbeat interval (env: MULTICA_DAEMON_HEARTBEAT_INTERVAL)")
-	f.Duration("agent-timeout", 0, "Per-task timeout (env: MULTICA_AGENT_TIMEOUT)")
-	f.Int("max-concurrent-tasks", 0, "Max tasks running in parallel (env: MULTICA_DAEMON_MAX_CONCURRENT_TASKS)")
+	f.String("daemon-id", "", "Unique daemon identifier (env: AURION_DAEMON_ID)")
+	f.String("device-name", "", "Human-readable device name (env: AURION_DAEMON_DEVICE_NAME)")
+	f.String("runtime-name", "", "Runtime display name (env: AURION_AGENT_RUNTIME_NAME)")
+	f.Duration("poll-interval", 0, "Task poll interval (env: AURION_DAEMON_POLL_INTERVAL)")
+	f.Duration("heartbeat-interval", 0, "Heartbeat interval (env: AURION_DAEMON_HEARTBEAT_INTERVAL)")
+	f.Duration("agent-timeout", 0, "Per-task timeout (env: AURION_AGENT_TIMEOUT)")
+	f.Int("max-concurrent-tasks", 0, "Max tasks running in parallel (env: AURION_DAEMON_MAX_CONCURRENT_TASKS)")
 
 	daemonLogsCmd.Flags().BoolP("follow", "f", false, "Follow log output")
 	daemonLogsCmd.Flags().IntP("lines", "n", 50, "Number of lines to show")
@@ -75,13 +75,13 @@ func init() {
 	// restart shares all the same flags as start
 	rf := daemonRestartCmd.Flags()
 	rf.Bool("foreground", false, "Run in the foreground instead of background")
-	rf.String("daemon-id", "", "Unique daemon identifier (env: MULTICA_DAEMON_ID)")
-	rf.String("device-name", "", "Human-readable device name (env: MULTICA_DAEMON_DEVICE_NAME)")
-	rf.String("runtime-name", "", "Runtime display name (env: MULTICA_AGENT_RUNTIME_NAME)")
-	rf.Duration("poll-interval", 0, "Task poll interval (env: MULTICA_DAEMON_POLL_INTERVAL)")
-	rf.Duration("heartbeat-interval", 0, "Heartbeat interval (env: MULTICA_DAEMON_HEARTBEAT_INTERVAL)")
-	rf.Duration("agent-timeout", 0, "Per-task timeout (env: MULTICA_AGENT_TIMEOUT)")
-	rf.Int("max-concurrent-tasks", 0, "Max tasks running in parallel (env: MULTICA_DAEMON_MAX_CONCURRENT_TASKS)")
+	rf.String("daemon-id", "", "Unique daemon identifier (env: AURION_DAEMON_ID)")
+	rf.String("device-name", "", "Human-readable device name (env: AURION_DAEMON_DEVICE_NAME)")
+	rf.String("runtime-name", "", "Runtime display name (env: AURION_AGENT_RUNTIME_NAME)")
+	rf.Duration("poll-interval", 0, "Task poll interval (env: AURION_DAEMON_POLL_INTERVAL)")
+	rf.Duration("heartbeat-interval", 0, "Heartbeat interval (env: AURION_DAEMON_HEARTBEAT_INTERVAL)")
+	rf.Duration("agent-timeout", 0, "Per-task timeout (env: AURION_AGENT_TIMEOUT)")
+	rf.Int("max-concurrent-tasks", 0, "Max tasks running in parallel (env: AURION_DAEMON_MAX_CONCURRENT_TASKS)")
 
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
@@ -91,7 +91,7 @@ func init() {
 }
 
 // daemonDirForProfile returns the state directory for the given profile.
-// Empty profile → ~/.multica/, named profile → ~/.multica/profiles/<name>/.
+// Empty profile → ~/.aurion/, named profile → ~/.aurion/profiles/<name>/.
 func daemonDirForProfile(profile string) string {
 	dir, err := cli.ProfileDir(profile)
 	if err != nil {
@@ -259,7 +259,7 @@ func buildDaemonStartArgs(cmd *cobra.Command) []string {
 func runDaemonForeground(cmd *cobra.Command) error {
 	profile := resolveProfile(cmd)
 
-	serverURL := cli.FlagOrEnv(cmd, "server-url", "MULTICA_SERVER_URL", "")
+	serverURL := cli.FlagOrEnv(cmd, "server-url", "AURION_SERVER_URL", "")
 	if serverURL == "" {
 		if c, err := cli.LoadCLIConfigForProfile(profile); err == nil && c.ServerURL != "" {
 			serverURL = c.ServerURL
@@ -293,7 +293,7 @@ func runDaemonForeground(cmd *cobra.Command) error {
 	cfg.CLIVersion = version
 	// Set by the Electron Desktop app when it spawns the CLI so the server
 	// can mark those runtimes as "managed" and hide CLI self-update UI.
-	cfg.LaunchedBy = os.Getenv("MULTICA_LAUNCHED_BY")
+	cfg.LaunchedBy = os.Getenv("AURION_LAUNCHED_BY")
 
 	ctx, stop := notifyShutdownContext(context.Background())
 	defer stop()

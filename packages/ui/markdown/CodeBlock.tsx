@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { codeToHtml, bundledLanguages, type BundledLanguage } from 'shiki'
 import { Copy, Check } from "lucide-react"
-import { Button } from "@multica/ui/components/ui/button"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip"
-import { cn } from '@multica/ui/lib/utils'
+import { Button } from "@aurion/ui/components/ui/button"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip"
+import { cn } from '@aurion/ui/lib/utils'
 
 export interface CodeBlockProps {
   code: string

@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { issueKeys } from "@multica/core/issues/queries";
+import { workspaceKeys } from "@aurion/core/workspace/queries";
+import { issueKeys } from "@aurion/core/issues/queries";
 import type { QueryClient } from "@tanstack/react-query";
 
 // Mock the workspace id singleton — items() reads it imperatively.
-vi.mock("@multica/core/platform", () => ({
+vi.mock("@aurion/core/platform", () => ({
   getCurrentWsId: () => "ws-1",
 }));
 
 // Mock the API so we control searchIssues responses + observe calls.
 const searchIssuesMock = vi.fn();
-vi.mock("@multica/core/api", () => ({
+vi.mock("@aurion/core/api", () => ({
   api: {
     get searchIssues() {
       return searchIssuesMock;

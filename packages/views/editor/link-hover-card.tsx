@@ -14,8 +14,8 @@ import { createPortal } from "react-dom";
 import { computePosition, offset, flip, shift } from "@floating-ui/dom";
 import { ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@multica/ui/components/ui/button";
-import { useWorkspaceSlug } from "@multica/core/paths";
+import { Button } from "@aurion/ui/components/ui/button";
+import { useWorkspaceSlug } from "@aurion/core/paths";
 import { openLink, isMentionHref } from "./utils/link-handler";
 
 function truncateUrl(url: string, max = 48): string {

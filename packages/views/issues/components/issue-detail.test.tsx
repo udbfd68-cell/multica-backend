@@ -2,12 +2,12 @@ import { forwardRef, useRef, useState, useImperativeHandle } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Issue, TimelineEntry } from "@multica/core/types";
+import type { Issue, TimelineEntry } from "@aurion/core/types";
 // useWorkspaceId() derives from useCurrentWorkspace (relative import inside
-// @multica/core/hooks.tsx). vi.mock("@multica/core/paths") only intercepts
+// @aurion/core/hooks.tsx). vi.mock("@aurion/core/paths") only intercepts
 // the bare-specifier, not the internal relative import. Mock the hooks module
 // directly so the bridge hook returns the test UUID.
-vi.mock("@multica/core/hooks", () => ({
+vi.mock("@aurion/core/hooks", () => ({
   useWorkspaceId: () => "ws-1",
 }));
 
@@ -15,9 +15,9 @@ vi.mock("@multica/core/hooks", () => ({
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Mock @multica/core/auth
+// Mock @aurion/core/auth
 const mockAuthUser = { id: "user-1", email: "test@test.com", name: "Test User" };
-vi.mock("@multica/core/auth", () => ({
+vi.mock("@aurion/core/auth", () => ({
   useAuthStore: Object.assign(
     (selector?: any) => {
       const state = { user: mockAuthUser, isAuthenticated: true };
@@ -29,8 +29,8 @@ vi.mock("@multica/core/auth", () => ({
   createAuthStore: vi.fn(),
 }));
 
-// Mock @multica/core/workspace/hooks
-vi.mock("@multica/core/workspace/hooks", () => ({
+// Mock @aurion/core/workspace/hooks
+vi.mock("@aurion/core/workspace/hooks", () => ({
   useActorName: () => ({
     getMemberName: (id: string) => (id === "user-1" ? "Test User" : "Unknown"),
     getAgentName: (id: string) => (id === "agent-1" ? "Claude Agent" : "Unknown Agent"),
@@ -45,7 +45,7 @@ vi.mock("@multica/core/workspace/hooks", () => ({
 }));
 
 // Mock workspace queries
-vi.mock("@multica/core/workspace/queries", () => ({
+vi.mock("@aurion/core/workspace/queries", () => ({
   memberListOptions: () => ({
     queryKey: ["workspaces", "ws-1", "members"],
     queryFn: () => Promise.resolve([{ user_id: "user-1", name: "Test User", email: "test@test.com", role: "admin" }]),
@@ -64,12 +64,12 @@ vi.mock("@multica/core/workspace/queries", () => ({
   }),
 }));
 
-// Mock @multica/core/paths — after the URL-driven workspace refactor,
+// Mock @aurion/core/paths — after the URL-driven workspace refactor,
 // useCurrentWorkspace / useWorkspacePaths derive from the workspace slug in
 // URL Context. Tests don't mount a real route, so we short-circuit to fixtures.
-vi.mock("@multica/core/paths", async () => {
-  const actual = await vi.importActual<typeof import("@multica/core/paths")>(
-    "@multica/core/paths",
+vi.mock("@aurion/core/paths", async () => {
+  const actual = await vi.importActual<typeof import("@aurion/core/paths")>(
+    "@aurion/core/paths",
   );
   return {
     ...actual,
@@ -188,14 +188,14 @@ const mockApiObj = vi.hoisted(() => ({
   listAgents: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@aurion/core/api", () => ({
   api: mockApiObj,
   getApi: () => mockApiObj,
   setApiInstance: vi.fn(),
 }));
 
 // Mock issue config
-vi.mock("@multica/core/issues/config", () => ({
+vi.mock("@aurion/core/issues/config", () => ({
   ALL_STATUSES: ["backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"],
   BOARD_STATUSES: ["backlog", "todo", "in_progress", "in_review", "done", "blocked"],
   STATUS_ORDER: ["backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"],
@@ -220,7 +220,7 @@ vi.mock("@multica/core/issues/config", () => ({
 
 // Mock recent issues store
 const mockRecordVisit = vi.fn();
-vi.mock("@multica/core/issues/stores", () => ({
+vi.mock("@aurion/core/issues/stores", () => ({
   useRecentIssuesStore: Object.assign(
     (selector?: any) => {
       const state = { items: [], recordVisit: mockRecordVisit };
@@ -239,7 +239,7 @@ vi.mock("@multica/core/issues/stores", () => ({
 }));
 
 // Mock modals
-vi.mock("@multica/core/modals", () => ({
+vi.mock("@aurion/core/modals", () => ({
   useModalStore: Object.assign(
     () => ({ open: vi.fn() }),
     { getState: () => ({ open: vi.fn() }) },
@@ -247,17 +247,17 @@ vi.mock("@multica/core/modals", () => ({
 }));
 
 // Mock core/utils
-vi.mock("@multica/core/utils", () => ({
+vi.mock("@aurion/core/utils", () => ({
   timeAgo: () => "1d ago",
 }));
 
 // Mock core/hooks/use-file-upload
-vi.mock("@multica/core/hooks/use-file-upload", () => ({
+vi.mock("@aurion/core/hooks/use-file-upload", () => ({
   useFileUpload: () => ({ uploadWithToast: vi.fn().mockResolvedValue("https://example.com/file.png") }),
 }));
 
 // Mock realtime
-vi.mock("@multica/core/realtime", () => ({
+vi.mock("@aurion/core/realtime", () => ({
   useWSEvent: vi.fn(),
   useWSReconnect: vi.fn(),
   useWS: () => ({ subscribe: vi.fn(() => () => {}), onReconnect: vi.fn(() => () => {}) }),
@@ -270,7 +270,7 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
-// Mock react-resizable-panels (used by @multica/ui/components/ui/resizable)
+// Mock react-resizable-panels (used by @aurion/ui/components/ui/resizable)
 vi.mock("react-resizable-panels", () => ({
   Group: ({ children, ...props }: any) => <div data-testid="panel-group" {...props}>{children}</div>,
   Panel: ({ children, ...props }: any) => <div data-testid="panel" {...props}>{children}</div>,

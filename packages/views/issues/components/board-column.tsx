@@ -2,20 +2,20 @@
 
 import { useMemo, type ReactNode } from "react";
 import { EyeOff, MoreHorizontal, Plus } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Issue, IssueStatus } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+import type { Issue, IssueStatus } from "@aurion/core/types";
+import { Button } from "@aurion/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
-import { useModalStore } from "@multica/core/modals";
-import { useViewStoreApi } from "@multica/core/issues/stores/view-store-context";
+} from "@aurion/ui/components/ui/dropdown-menu";
+import { STATUS_CONFIG } from "@aurion/core/issues/config";
+import { useModalStore } from "@aurion/core/modals";
+import { useViewStoreApi } from "@aurion/core/issues/stores/view-store-context";
 import { StatusIcon } from "./status-icon";
 import { DraggableBoardCard } from "./board-card";
 import type { ChildProgress } from "./list-row";

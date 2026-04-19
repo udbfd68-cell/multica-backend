@@ -21,9 +21,9 @@
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
 import { useQuery } from "@tanstack/react-query";
-import { issueListOptions, issueDetailOptions } from "@multica/core/issues/queries";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
+import { issueListOptions, issueDetailOptions } from "@aurion/core/issues/queries";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useWorkspacePaths } from "@aurion/core/paths";
 import { useNavigation } from "../../navigation";
 import { StatusIcon } from "../../issues/components/status-icon";
 

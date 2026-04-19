@@ -3,45 +3,45 @@
 import { useState, useEffect } from "react";
 import { Zap, Play, Clock, Plus, Trash2, CheckCircle2, XCircle, Loader2, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { autopilotDetailOptions, autopilotRunsOptions } from "@multica/core/autopilots/queries";
+import { autopilotDetailOptions, autopilotRunsOptions } from "@aurion/core/autopilots/queries";
 import {
   useUpdateAutopilot,
   useDeleteAutopilot,
   useTriggerAutopilot,
   useCreateAutopilotTrigger,
   useDeleteAutopilotTrigger,
-} from "@multica/core/autopilots/mutations";
-import { agentListOptions } from "@multica/core/workspace/queries";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { useActorName } from "@multica/core/workspace/hooks";
+} from "@aurion/core/autopilots/mutations";
+import { agentListOptions } from "@aurion/core/workspace/queries";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useWorkspacePaths } from "@aurion/core/paths";
+import { useActorName } from "@aurion/core/workspace/hooks";
 import { useNavigation, AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { Button } from "@multica/ui/components/ui/button";
-import { Switch } from "@multica/ui/components/ui/switch";
-import { cn } from "@multica/ui/lib/utils";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Switch } from "@aurion/ui/components/ui/switch";
+import { cn } from "@aurion/ui/lib/utils";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
+} from "@aurion/ui/components/ui/dialog";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@multica/ui/components/ui/select";
+} from "@aurion/ui/components/ui/select";
 import {
   TriggerConfigSection,
   getDefaultTriggerConfig,
   toCronExpression,
 } from "./trigger-config";
 import type { TriggerConfig } from "./trigger-config";
-import type { AutopilotRun, AutopilotTrigger } from "@multica/core/types";
+import type { AutopilotRun, AutopilotTrigger } from "@aurion/core/types";
 
 function formatDate(date: string): string {
   return new Date(date).toLocaleString(undefined, {

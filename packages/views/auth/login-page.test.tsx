@@ -22,7 +22,7 @@ vi.mock("@tanstack/react-query", async () => {
   return { ...actual, useQueryClient: () => ({ setQueryData: mockSetQueryData }) };
 });
 
-vi.mock("@multica/core/auth", () => ({
+vi.mock("@aurion/core/auth", () => ({
   useAuthStore: Object.assign(
     // Zustand hook form — component may call useAuthStore(selector)
     (selector?: (s: unknown) => unknown) => {
@@ -38,7 +38,7 @@ vi.mock("@multica/core/auth", () => ({
   ),
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@aurion/core/api", () => ({
   api: {
     listWorkspaces: mockApiListWorkspaces,
     verifyCode: mockApiVerifyCode,
@@ -48,7 +48,7 @@ vi.mock("@multica/core/api", () => ({
   },
 }));
 
-vi.mock("@multica/core/types", () => ({}));
+vi.mock("@aurion/core/types", () => ({}));
 
 // ---------------------------------------------------------------------------
 // Import after mocks
@@ -93,10 +93,10 @@ describe("LoginPage", () => {
   // Email step rendering
   // -------------------------------------------------------------------------
 
-  it("renders email form with 'Sign in to Multica' title", () => {
+  it("renders email form with 'Sign in to Aurion' title", () => {
     render(<LoginPage onSuccess={onSuccess} />);
     expect(
-      screen.getByText(/sign in to multica/i),
+      screen.getByText(/sign in to aurion/i),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/enter your email to get a login code/i),
@@ -373,7 +373,7 @@ describe("LoginPage", () => {
   // -------------------------------------------------------------------------
 
   it("shows cli_confirm step when existing session + cliCallback", async () => {
-    localStorage.setItem("multica_token", "existing-jwt");
+    localStorage.setItem("aurion_token", "existing-jwt");
     // Cookie attempt fails first, then localStorage fallback succeeds
     mockApiGetMe
       .mockRejectedValueOnce(new Error("no cookie"))
@@ -405,7 +405,7 @@ describe("LoginPage", () => {
   });
 
   it("CLI authorize button redirects to callback URL", async () => {
-    localStorage.setItem("multica_token", "existing-jwt");
+    localStorage.setItem("aurion_token", "existing-jwt");
     // Cookie attempt fails, localStorage fallback succeeds
     mockApiGetMe
       .mockRejectedValueOnce(new Error("no cookie"))
@@ -440,7 +440,7 @@ describe("LoginPage", () => {
   });
 
   it("'Use a different account' returns to email step", async () => {
-    localStorage.setItem("multica_token", "existing-jwt");
+    localStorage.setItem("aurion_token", "existing-jwt");
     // Cookie attempt fails, localStorage fallback succeeds
     mockApiGetMe
       .mockRejectedValueOnce(new Error("no cookie"))
@@ -469,7 +469,7 @@ describe("LoginPage", () => {
     );
 
     expect(
-      screen.getByText(/sign in to multica/i),
+      screen.getByText(/sign in to aurion/i),
     ).toBeInTheDocument();
   });
 
@@ -655,7 +655,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /back/i }));
 
     expect(
-      screen.getByText(/sign in to multica/i),
+      screen.getByText(/sign in to aurion/i),
     ).toBeInTheDocument();
   });
 

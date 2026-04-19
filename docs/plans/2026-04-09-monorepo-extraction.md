@@ -6,7 +6,7 @@
 
 **核心洞察:** Electron renderer 就是浏览器。localStorage、fetch、WebSocket 和 Next.js 客户端页面完全一样。URL 是环境配置不是 app 差异。所以除了 NavigationAdapter（路由框架不同），没有任何东西需要在每个 app 里单独写。
 
-**Architecture:** `@multica/core` 自带完整初始化（API、stores、WS），不需要每个 app 调用 factory。`@multica/views` 包含所有页面和 layout。每个 app 只提供路由壳子。
+**Architecture:** `@aurion/core` 自带完整初始化（API、stores、WS），不需要每个 app 调用 factory。`@aurion/views` 包含所有页面和 layout。每个 app 只提供路由壳子。
 
 **Tech Stack:** React 19, TanStack Query, Zustand, Tailwind CSS v4, shadcn/ui, TypeScript strict mode.
 
@@ -34,7 +34,7 @@
 
 现在每个 app 都要手动调用 `new ApiClient()`、`createAuthStore()`、`createWorkspaceStore()`、包 `<WSProvider>`。但这些逻辑在两个 app 里完全一样。
 
-方案：`@multica/core` 导出一个 `<CoreProvider>` 包裹整个应用。它内部自动完成所有初始化。配置通过环境变量（`VITE_API_URL` / `NEXT_PUBLIC_API_URL`）或 prop 注入。SSR-safe 的 localStorage wrapper 内置到 core 里作为默认 storage（`typeof window` 守卫对 Electron 无害）。
+方案：`@aurion/core` 导出一个 `<CoreProvider>` 包裹整个应用。它内部自动完成所有初始化。配置通过环境变量（`VITE_API_URL` / `NEXT_PUBLIC_API_URL`）或 prop 注入。SSR-safe 的 localStorage wrapper 内置到 core 里作为默认 storage（`typeof window` 守卫对 Electron 无害）。
 
 ```tsx
 // 任何 app 的根组件，只需要这样：
@@ -58,7 +58,7 @@ Desktop 更简单（没有可选回调）：
 </CoreProvider>
 ```
 
-### Task 1: 在 `@multica/core` 里创建 CoreProvider
+### Task 1: 在 `@aurion/core` 里创建 CoreProvider
 
 **Files:**
 - Create: `packages/core/platform/storage.ts` — 内置 SSR-safe localStorage
@@ -124,7 +124,7 @@ export function AuthInitializer({
   onLogout?: () => void;
 }) {
   useEffect(() => {
-    const token = defaultStorage.getItem("multica_token");
+    const token = defaultStorage.getItem("aurion_token");
     if (!token) {
       onLogout?.();
       useAuthStore.setState({ isLoading: false });
@@ -133,7 +133,7 @@ export function AuthInitializer({
 
     const api = getApi();
     api.setToken(token);
-    const wsId = defaultStorage.getItem("multica_workspace_id");
+    const wsId = defaultStorage.getItem("aurion_workspace_id");
 
     Promise.all([api.getMe(), api.listWorkspaces()])
       .then(([user, wsList]) => {
@@ -145,8 +145,8 @@ export function AuthInitializer({
         logger.error("auth init failed", err);
         api.setToken(null);
         api.setWorkspaceId(null);
-        defaultStorage.removeItem("multica_token");
-        defaultStorage.removeItem("multica_workspace_id");
+        defaultStorage.removeItem("aurion_token");
+        defaultStorage.removeItem("aurion_workspace_id");
         onLogout?.();
         useAuthStore.setState({ user: null, isLoading: false });
       });
@@ -187,16 +187,16 @@ function initCore(apiBaseUrl: string) {
   const api = new ApiClient(apiBaseUrl, {
     logger: createLogger("api"),
     onUnauthorized: () => {
-      defaultStorage.removeItem("multica_token");
-      defaultStorage.removeItem("multica_workspace_id");
+      defaultStorage.removeItem("aurion_token");
+      defaultStorage.removeItem("aurion_workspace_id");
     },
   });
   setApiInstance(api);
 
   // Hydrate token from storage
-  const token = defaultStorage.getItem("multica_token");
+  const token = defaultStorage.getItem("aurion_token");
   if (token) api.setToken(token);
-  const wsId = defaultStorage.getItem("multica_workspace_id");
+  const wsId = defaultStorage.getItem("aurion_workspace_id");
   if (wsId) api.setWorkspaceId(wsId);
 
   authStore = createAuthStore({ api, storage: defaultStorage });
@@ -291,7 +291,7 @@ git commit -m "feat(core): add CoreProvider — single component for full app in
 
 ```typescript
 // apps/web/app/layout.tsx
-import { CoreProvider } from "@multica/core/platform";
+import { CoreProvider } from "@aurion/core/platform";
 import { WebNavigationProvider } from "@/platform/navigation";
 import { setLoggedInCookie, clearLoggedInCookie } from "@/features/auth/auth-cookie";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -325,7 +325,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ```typescript
 // apps/desktop/src/renderer/src/App.tsx
 import { RouterProvider } from "react-router-dom";
-import { CoreProvider } from "@multica/core/platform";
+import { CoreProvider } from "@aurion/core/platform";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "sonner";
 import { router } from "./router";
@@ -348,9 +348,9 @@ export function App() {
 **Step 3: Fix all `@/platform/*` imports across both apps**
 
 Search all files for:
-- `from "@/platform/api"` → `from "@multica/core/api"` (use singleton proxy `api`)
-- `from "@/platform/auth"` → `from "@multica/core/auth"` (use singleton `useAuthStore`)
-- `from "@/platform/workspace"` → `from "@multica/core/workspace"` (use singleton `useWorkspaceStore`)
+- `from "@/platform/api"` → `from "@aurion/core/api"` (use singleton proxy `api`)
+- `from "@/platform/auth"` → `from "@aurion/core/auth"` (use singleton `useAuthStore`)
+- `from "@/platform/workspace"` → `from "@aurion/core/workspace"` (use singleton `useWorkspaceStore`)
 
 These singletons already exist and are registered by CoreProvider on init. Every component can import them directly from core.
 
@@ -381,7 +381,7 @@ git commit -m "refactor: migrate both apps to CoreProvider — delete all platfo
 
 ## Phase 2: Sidebar & Layout
 
-### Task 3: Extract `AppSidebar` to `@multica/views/layout`
+### Task 3: Extract `AppSidebar` to `@aurion/views/layout`
 
 **Why:** Web and Desktop sidebars are 99% identical (239 vs 236 lines). Only difference: `Link`/`usePathname`/`useRouter` (web) vs `AppLink`/`useNavigation` (desktop). Since `useNavigation` + `AppLink` is the abstraction in views, the desktop version is already the correct shared version.
 
@@ -397,12 +397,12 @@ git commit -m "refactor: migrate both apps to CoreProvider — delete all platfo
 **Step 1: Create shared AppSidebar**
 
 Copy desktop `app-sidebar.tsx` into `packages/views/layout/app-sidebar.tsx`. Key changes:
-- `import { useAuthStore } from "@multica/core/auth"` (singleton)
-- `import { useWorkspaceStore } from "@multica/core/workspace"` (singleton)
-- `import { api } from "@multica/core/api"` (singleton proxy)
+- `import { useAuthStore } from "@aurion/core/auth"` (singleton)
+- `import { useWorkspaceStore } from "@aurion/core/workspace"` (singleton)
+- `import { api } from "@aurion/core/api"` (singleton proxy)
 - `import { useNavigation, AppLink } from "../navigation"` (relative within views)
-- `import { useModalStore } from "@multica/core/modals"`
-- All `@multica/ui` imports unchanged
+- `import { useModalStore } from "@aurion/core/modals"`
+- All `@aurion/ui` imports unchanged
 
 **Step 2: Barrel export + package.json**
 
@@ -425,12 +425,12 @@ Run: `pnpm typecheck`
 **Step 5: Commit**
 
 ```bash
-git commit -m "refactor(views): extract shared AppSidebar to @multica/views/layout"
+git commit -m "refactor(views): extract shared AppSidebar to @aurion/views/layout"
 ```
 
 ---
 
-### Task 4: Extract `DashboardLayout` to `@multica/views/layout`
+### Task 4: Extract `DashboardLayout` to `@aurion/views/layout`
 
 **Why:** Both apps have identical dashboard shell: auth guard → loading → sidebar + workspace provider + content. Only differences: web has `SearchCommand`, desktop has `TitleBar`. These are slots.
 
@@ -447,11 +447,11 @@ git commit -m "refactor(views): extract shared AppSidebar to @multica/views/layo
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useNavigationStore } from "@multica/core/navigation";
-import { SidebarProvider, SidebarInset } from "@multica/ui/components/ui/sidebar";
-import { WorkspaceIdProvider } from "@multica/core/hooks";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceStore } from "@multica/core/workspace";
+import { useNavigationStore } from "@aurion/core/navigation";
+import { SidebarProvider, SidebarInset } from "@aurion/ui/components/ui/sidebar";
+import { WorkspaceIdProvider } from "@aurion/core/hooks";
+import { useAuthStore } from "@aurion/core/auth";
+import { useWorkspaceStore } from "@aurion/core/workspace";
 import { ModalRegistry } from "../modals/registry";
 import { useNavigation } from "../navigation";
 import { AppSidebar } from "./app-sidebar";
@@ -528,14 +528,14 @@ export function DashboardLayout({
 ```typescript
 // apps/web/app/(dashboard)/layout.tsx
 "use client";
-import { DashboardLayout } from "@multica/views/layout";
-import { MulticaIcon } from "@/components/multica-icon";
+import { DashboardLayout } from "@aurion/views/layout";
+import { AurionIcon } from "@/components/aurion-icon";
 import { SearchCommand } from "@/features/search";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout
-      loadingIndicator={<MulticaIcon className="size-6" />}
+      loadingIndicator={<AurionIcon className="size-6" />}
       extra={<SearchCommand />}
     >
       {children}
@@ -550,9 +550,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 // apps/desktop/src/renderer/src/components/dashboard-shell.tsx
 import { Outlet } from "react-router-dom";
 import { DesktopNavigationProvider } from "@/platform/navigation";
-import { DashboardLayout } from "@multica/views/layout";
+import { DashboardLayout } from "@aurion/views/layout";
 import { TitleBar } from "./title-bar";
-import { MulticaIcon } from "./multica-icon";
+import { AurionIcon } from "./aurion-icon";
 
 export function DashboardShell() {
   return (
@@ -560,7 +560,7 @@ export function DashboardShell() {
       <DashboardLayout
         header={<TitleBar />}
         loginPath="/login"
-        loadingIndicator={<MulticaIcon className="size-6" />}
+        loadingIndicator={<AurionIcon className="size-6" />}
       >
         <Outlet />
       </DashboardLayout>
@@ -576,7 +576,7 @@ Run: `pnpm typecheck`
 **Step 5: Commit**
 
 ```bash
-git commit -m "refactor(views): extract shared DashboardLayout to @multica/views/layout"
+git commit -m "refactor(views): extract shared DashboardLayout to @aurion/views/layout"
 ```
 
 ---
@@ -594,7 +594,7 @@ git commit -m "fix: fixups from layout extraction"
 
 ## Phase 3: Shared Login Page
 
-### Task 6: Extract `LoginPage` to `@multica/views/auth`
+### Task 6: Extract `LoginPage` to `@aurion/views/auth`
 
 **Why:** Desktop login (139 lines) is a simple email/code form. Web login (393 lines) has extra: CLI callback, Google OAuth, OTP component. Strategy: extract the core email/code form to views. Desktop uses it directly. Web keeps its own richer version (too different to merge).
 
@@ -612,8 +612,8 @@ Props: `logo?: ReactNode`, `onSuccess: () => void`. Internally uses `useAuthStor
 
 ```typescript
 import { useNavigate } from "react-router-dom";
-import { LoginPage } from "@multica/views/auth";
-import { MulticaIcon } from "../components/multica-icon";
+import { LoginPage } from "@aurion/views/auth";
+import { AurionIcon } from "../components/aurion-icon";
 import { TitleBar } from "../components/title-bar";
 
 export function DesktopLoginPage() {
@@ -622,7 +622,7 @@ export function DesktopLoginPage() {
     <div className="flex h-screen flex-col">
       <TitleBar />
       <LoginPage
-        logo={<MulticaIcon bordered size="lg" />}
+        logo={<AurionIcon bordered size="lg" />}
         onSuccess={() => navigate("/issues", { replace: true })}
       />
     </div>
@@ -637,7 +637,7 @@ Web login stays as-is (CLI callback + Google OAuth = web-only features).
 **Step 4: Commit**
 
 ```bash
-git commit -m "feat(views): extract shared LoginPage to @multica/views/auth"
+git commit -m "feat(views): extract shared LoginPage to @aurion/views/auth"
 ```
 
 ---
@@ -650,7 +650,7 @@ Run: `pnpm typecheck && pnpm test`
 
 ## Phase 4: Extract Agents Page (1,279 lines → shared module)
 
-### Task 8: Create `@multica/views/agents`
+### Task 8: Create `@aurion/views/agents`
 
 **Files:**
 - Create: `packages/views/agents/config.ts` — statusConfig, taskStatusConfig
@@ -666,14 +666,14 @@ Run: `pnpm typecheck && pnpm test`
 - Create: `packages/views/agents/index.ts`
 - Modify: `packages/views/package.json` (add `"./agents"` export)
 
-**Key migration:** All `@/platform/*` imports → `@multica/core/*` singletons. All `@multica/ui` and `@multica/core` imports stay as-is. `@multica/views` imports become relative.
+**Key migration:** All `@/platform/*` imports → `@aurion/core/*` singletons. All `@aurion/ui` and `@aurion/core` imports stay as-is. `@aurion/views` imports become relative.
 
 **Step 1:** Extract config → components → barrel
 **Step 2:** Run `pnpm typecheck`
 **Step 3:** Commit
 
 ```bash
-git commit -m "feat(views): extract agents page to @multica/views/agents"
+git commit -m "feat(views): extract agents page to @aurion/views/agents"
 ```
 
 ---
@@ -682,10 +682,10 @@ git commit -m "feat(views): extract agents page to @multica/views/agents"
 
 ```typescript
 // apps/web/app/(dashboard)/agents/page.tsx — 1 line replaces 1,279
-export { AgentsPage as default } from "@multica/views/agents";
+export { AgentsPage as default } from "@aurion/views/agents";
 ```
 
-Commit: `refactor(web): replace agents page with @multica/views/agents import`
+Commit: `refactor(web): replace agents page with @aurion/views/agents import`
 
 ---
 
@@ -693,17 +693,17 @@ Commit: `refactor(web): replace agents page with @multica/views/agents import`
 
 ```typescript
 // router.tsx
-import { AgentsPage } from "@multica/views/agents";
+import { AgentsPage } from "@aurion/views/agents";
 { path: "agents", element: <AgentsPage /> },
 ```
 
-Commit: `feat(desktop): wire agents page from @multica/views`
+Commit: `feat(desktop): wire agents page from @aurion/views`
 
 ---
 
 ## Phase 5: Extract Inbox Page (468 lines → shared module)
 
-### Task 11: Create `@multica/views/inbox`
+### Task 11: Create `@aurion/views/inbox`
 
 **Files:**
 - Create: `packages/views/inbox/components/inbox-page.tsx`
@@ -716,9 +716,9 @@ Commit: `feat(desktop): wire agents page from @multica/views`
 **Key migration:**
 - `import { useSearchParams } from "next/navigation"` → `import { useNavigation } from "../navigation"` — use `searchParams` from adapter
 - `window.history.replaceState(null, "", url)` → `replace(url)` from `useNavigation()`
-- `@/platform/*` → `@multica/core/*` singletons
+- `@/platform/*` → `@aurion/core/*` singletons
 
-Commit: `feat(views): extract inbox page to @multica/views/inbox`
+Commit: `feat(views): extract inbox page to @aurion/views/inbox`
 
 ---
 
@@ -726,27 +726,27 @@ Commit: `feat(views): extract inbox page to @multica/views/inbox`
 
 ```typescript
 // apps/web/app/(dashboard)/inbox/page.tsx — 1 line replaces 468
-export { InboxPage as default } from "@multica/views/inbox";
+export { InboxPage as default } from "@aurion/views/inbox";
 ```
 
-Commit: `refactor(web): replace inbox page with @multica/views/inbox import`
+Commit: `refactor(web): replace inbox page with @aurion/views/inbox import`
 
 ---
 
 ### Task 13: Wire desktop inbox route
 
 ```typescript
-import { InboxPage } from "@multica/views/inbox";
+import { InboxPage } from "@aurion/views/inbox";
 { path: "inbox", element: <InboxPage /> },
 ```
 
-Commit: `feat(desktop): wire inbox page from @multica/views`
+Commit: `feat(desktop): wire inbox page from @aurion/views`
 
 ---
 
 ## Phase 6: Extract Settings Page (1,277 lines → shared module)
 
-### Task 14: Create `@multica/views/settings`
+### Task 14: Create `@aurion/views/settings`
 
 **Files:**
 - Create: `packages/views/settings/components/settings-page.tsx`
@@ -760,9 +760,9 @@ Commit: `feat(desktop): wire inbox page from @multica/views`
 - Create: `packages/views/settings/index.ts`
 - Modify: `packages/views/package.json` (add `"./settings"` export)
 
-**Key migration:** Same pattern — `@/platform/*` → `@multica/core/*` singletons.
+**Key migration:** Same pattern — `@/platform/*` → `@aurion/core/*` singletons.
 
-Commit: `feat(views): extract settings page to @multica/views/settings`
+Commit: `feat(views): extract settings page to @aurion/views/settings`
 
 ---
 
@@ -770,23 +770,23 @@ Commit: `feat(views): extract settings page to @multica/views/settings`
 
 ```typescript
 // apps/web/app/(dashboard)/settings/page.tsx — 1 line replaces 1,277 (page + 6 tabs)
-export { SettingsPage as default } from "@multica/views/settings";
+export { SettingsPage as default } from "@aurion/views/settings";
 ```
 
 Delete `apps/web/app/(dashboard)/settings/_components/` (all 6 files).
 
-Commit: `refactor(web): replace settings page with @multica/views/settings import`
+Commit: `refactor(web): replace settings page with @aurion/views/settings import`
 
 ---
 
 ### Task 16: Wire desktop settings route
 
 ```typescript
-import { SettingsPage } from "@multica/views/settings";
+import { SettingsPage } from "@aurion/views/settings";
 { path: "settings", element: <SettingsPage /> },
 ```
 
-Commit: `feat(desktop): wire settings page from @multica/views`
+Commit: `feat(desktop): wire settings page from @aurion/views`
 
 ---
 
@@ -841,13 +841,13 @@ apps/desktop/
 ├── src/preload/                # preload bridge
 ├── src/renderer/src/
 │   ├── App.tsx                 # CoreProvider + RouterProvider + ThemeProvider
-│   ├── router.tsx              # 路由表（全部 @multica/views/*）
+│   ├── router.tsx              # 路由表（全部 @aurion/views/*）
 │   ├── lib/
 │   │   └── navigation.tsx      # DesktopNavigationProvider（唯一平台代码）
 │   ├── components/
 │   │   ├── dashboard-shell.tsx # DashboardLayout + TitleBar (10 行)
 │   │   ├── title-bar.tsx       # Desktop 独有
-│   │   └── multica-icon.tsx    # Desktop 独有
+│   │   └── aurion-icon.tsx    # Desktop 独有
 │   └── pages/
 │       └── login.tsx           # LoginPage + TitleBar (10 行)
 ```

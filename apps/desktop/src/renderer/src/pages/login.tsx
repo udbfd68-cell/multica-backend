@@ -1,12 +1,12 @@
-import { LoginPage } from "@multica/views/auth";
-import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
+import { LoginPage } from "@aurion/views/auth";
+import { AurionIcon } from "@aurion/ui/components/common/aurion-icon";
 
 const WEB_URL = import.meta.env.VITE_APP_URL || "http://localhost:3000";
 
 export function DesktopLoginPage() {
   const handleGoogleLogin = () => {
     // Open web login page in the default browser with platform=desktop flag.
-    // The web callback will redirect back via multica:// deep link with the token.
+    // The web callback will redirect back via aurion:// deep link with the token.
     window.desktopAPI.openExternal(
       `${WEB_URL}/login?platform=desktop`,
     );
@@ -20,7 +20,7 @@ export function DesktopLoginPage() {
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
       />
       <LoginPage
-        logo={<MulticaIcon bordered size="lg" />}
+        logo={<AurionIcon bordered size="lg" />}
         onSuccess={() => {
           // Auth store update triggers AppContent re-render → shows DesktopShell.
           // Initial workspace navigation happens in routes.tsx via IndexRedirect.

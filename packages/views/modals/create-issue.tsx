@@ -3,26 +3,26 @@
 import { useState, useRef } from "react";
 import { useNavigation } from "../navigation";
 import { Check, ChevronRight, Maximize2, Minimize2, X as XIcon } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
+import { cn } from "@aurion/ui/lib/utils";
 import { toast } from "sonner";
-import type { IssueStatus, IssuePriority, IssueAssigneeType } from "@multica/core/types";
+import type { IssueStatus, IssuePriority, IssueAssigneeType } from "@aurion/core/types";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@multica/ui/components/ui/dialog";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@aurion/ui/components/ui/dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
+import { Button } from "@aurion/ui/components/ui/button";
 import { ContentEditor, type ContentEditorRef, TitleEditor, useFileDropZone, FileDropOverlay } from "../editor";
 import { StatusIcon, StatusPicker, PriorityPicker, AssigneePicker, DueDatePicker } from "../issues/components";
 import { BacklogAgentHintContent } from "../issues/components/backlog-agent-hint-dialog";
 import { ProjectPicker } from "../projects/components/project-picker";
-import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
-import { useIssueDraftStore } from "@multica/core/issues/stores/draft-store";
-import { useCreateIssue, useUpdateIssue } from "@multica/core/issues/mutations";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
+import { useCurrentWorkspace, useWorkspacePaths } from "@aurion/core/paths";
+import { useIssueDraftStore } from "@aurion/core/issues/stores/draft-store";
+import { useCreateIssue, useUpdateIssue } from "@aurion/core/issues/mutations";
+import { useFileUpload } from "@aurion/core/hooks/use-file-upload";
+import { api } from "@aurion/core/api";
+import { FileUploadButton } from "@aurion/ui/components/common/file-upload-button";
 
 // ---------------------------------------------------------------------------
 // Pill trigger — shared rounded-full button style for toolbar
@@ -120,7 +120,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
       clearDraft();
       const shouldShowBacklogHint =
         status === "backlog" && assigneeType === "agent" && assigneeId &&
-        localStorage.getItem("multica:backlog-agent-hint-dismissed") !== "true";
+        localStorage.getItem("aurion:backlog-agent-hint-dismissed") !== "true";
 
       if (shouldShowBacklogHint) {
         setBacklogHintIssueId(issue.id);
@@ -194,7 +194,7 @@ export function CreateIssueModal({ onClose, data }: { onClose: () => void; data?
               onClose();
             }}
             onDismissPermanently={() => {
-              localStorage.setItem("multica:backlog-agent-hint-dismissed", "true");
+              localStorage.setItem("aurion:backlog-agent-hint-dismissed", "true");
             }}
             onMoveToTodo={() => {
               updateIssueMutation.mutate(

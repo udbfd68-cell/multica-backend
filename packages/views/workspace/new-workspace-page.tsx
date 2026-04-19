@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowLeft, LogOut } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
-import type { Workspace } from "@multica/core/types";
+import { Button } from "@aurion/ui/components/ui/button";
+import type { Workspace } from "@aurion/core/types";
 import { useLogout } from "../auth";
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
@@ -55,7 +55,7 @@ export function NewWorkspacePage({
         <div className="flex w-full max-w-md flex-col items-center gap-6">
           <div className="text-center">
             <h1 className="text-3xl font-semibold tracking-tight">
-              Welcome to Multica
+              Welcome to Aurion
             </h1>
             <p className="mt-2 text-muted-foreground">
               Create your workspace to get started.

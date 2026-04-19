@@ -17,8 +17,8 @@ func testCmd() *cobra.Command {
 func TestResolveAppURL(t *testing.T) {
 	cmd := testCmd()
 
-	t.Run("prefers MULTICA_APP_URL", func(t *testing.T) {
-		t.Setenv("MULTICA_APP_URL", "http://localhost:14000")
+	t.Run("prefers AURION_APP_URL", func(t *testing.T) {
+		t.Setenv("AURION_APP_URL", "http://localhost:14000")
 		t.Setenv("FRONTEND_ORIGIN", "http://localhost:13000")
 
 		if got := resolveAppURL(cmd); got != "http://localhost:14000" {
@@ -27,7 +27,7 @@ func TestResolveAppURL(t *testing.T) {
 	})
 
 	t.Run("falls back to FRONTEND_ORIGIN", func(t *testing.T) {
-		t.Setenv("MULTICA_APP_URL", "")
+		t.Setenv("AURION_APP_URL", "")
 		t.Setenv("FRONTEND_ORIGIN", "http://localhost:13026")
 
 		if got := resolveAppURL(cmd); got != "http://localhost:13026" {

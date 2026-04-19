@@ -22,7 +22,7 @@ import (
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
-	Short: "Authenticate multica with Multica",
+	Short: "Authenticate aurion with Aurion",
 }
 
 var authStatusCmd = &cobra.Command{
@@ -43,7 +43,7 @@ func init() {
 }
 
 func resolveToken(cmd *cobra.Command) string {
-	if v := strings.TrimSpace(os.Getenv("MULTICA_TOKEN")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("AURION_TOKEN")); v != "" {
 		return v
 	}
 	profile := resolveProfile(cmd)
@@ -52,7 +52,7 @@ func resolveToken(cmd *cobra.Command) string {
 }
 
 func resolveAppURL(cmd *cobra.Command) string {
-	for _, key := range []string{"MULTICA_APP_URL", "FRONTEND_ORIGIN"} {
+	for _, key := range []string{"AURION_APP_URL", "FRONTEND_ORIGIN"} {
 		if val := strings.TrimSpace(os.Getenv(key)); val != "" {
 			return strings.TrimRight(val, "/")
 		}
@@ -62,7 +62,7 @@ func resolveAppURL(cmd *cobra.Command) string {
 	if err == nil && cfg.AppURL != "" {
 		return strings.TrimRight(cfg.AppURL, "/")
 	}
-	fmt.Fprintln(os.Stderr, "No app URL configured. Run 'multica setup' first.")
+	fmt.Fprintln(os.Stderr, "No app URL configured. Run 'aurion setup' first.")
 	os.Exit(1)
 	return "" // unreachable
 }
@@ -100,9 +100,9 @@ func runAuthLoginBrowser(cmd *cobra.Command) error {
 
 	// Determine the callback host from the configured app URL.
 	// For self-hosted setups where the browser is on a different machine
-	// (e.g. Multica running on a LAN server), use the server's private IP
+	// (e.g. Aurion running on a LAN server), use the server's private IP
 	// so the browser can reach the CLI's local HTTP server.
-	// For production (public hostnames like multica.ai), keep localhost —
+	// For production (public hostnames like aurion.studio), keep localhost —
 	// the browser and CLI are on the same machine.
 	callbackHost := "localhost"
 	bindAddr := "127.0.0.1"
@@ -275,7 +275,7 @@ func runAuthStatus(cmd *cobra.Command, _ []string) error {
 	serverURL := resolveServerURL(cmd)
 
 	if token == "" {
-		fmt.Fprintln(os.Stderr, "Not authenticated. Run 'multica login' to authenticate.")
+		fmt.Fprintln(os.Stderr, "Not authenticated. Run 'aurion login' to authenticate.")
 		return nil
 	}
 
@@ -289,7 +289,7 @@ func runAuthStatus(cmd *cobra.Command, _ []string) error {
 		Email string `json:"email"`
 	}
 	if err := client.GetJSON(ctx, "/api/me", &me); err != nil {
-		fmt.Fprintf(os.Stderr, "Token is invalid or expired: %v\nRun 'multica login' to re-authenticate.\n", err)
+		fmt.Fprintf(os.Stderr, "Token is invalid or expired: %v\nRun 'aurion login' to re-authenticate.\n", err)
 		return nil
 	}
 
@@ -307,7 +307,7 @@ const callbackSuccessHTML = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multica — Authenticated</title>
+<title>Aurion — Authenticated</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   @media (prefers-color-scheme: dark) {

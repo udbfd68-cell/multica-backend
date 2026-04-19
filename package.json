@@ -1,11 +1,11 @@
 {
-  "name": "multica",
+  "name": "aurion",
   "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:web": "turbo dev --filter=@multica/web",
-    "dev:desktop": "turbo dev --filter=@multica/desktop",
+    "dev:web": "turbo dev --filter=@aurion/web",
+    "dev:desktop": "turbo dev --filter=@aurion/desktop",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",

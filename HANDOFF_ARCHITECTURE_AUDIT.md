@@ -6,7 +6,7 @@
 
 ## 任务 1 — [P0] 空闲后列表数据陈旧
 
-**关联 issue**：[#951](https://github.com/multica-ai/multica/issues/951)
+**关联 issue**：[#951](https://github.com/aurion-ai/aurion/issues/951)
 
 ### 问题
 
@@ -213,7 +213,7 @@ export const useNavigationStore = create<NavigationState>()(
       onPathChange: (path) => { /* ... */ set({ lastPath: path }); },
     }),
     {
-      name: "multica_navigation",
+      name: "aurion_navigation",
       storage: createJSONStorage(() => createPersistStorage(defaultStorage)), // ← 这里用的是 global，不是 workspace-aware
       partialize: (state) => ({ lastPath: state.lastPath }),
     }
@@ -234,7 +234,7 @@ export const useNavigationStore = create<NavigationState>()(
 | myIssuesViewStore | ✅ | ✅ |
 | useChatStore | ✅（手动用 wsKey）| ✅ |
 
-另外 `packages/core/platform/storage-cleanup.ts:10-19` 的 `WORKSPACE_SCOPED_KEYS` 列表里也漏了 `multica_navigation`。
+另外 `packages/core/platform/storage-cleanup.ts:10-19` 的 `WORKSPACE_SCOPED_KEYS` 列表里也漏了 `aurion_navigation`。
 
 **现有的 workaround**：`packages/views/layout/app-sidebar.tsx:285` 切 workspace 时硬跳到 `/issues`，正是为了绕开这个 bug。修好 navigation store 之后这行 hack 可以删掉。
 
@@ -252,7 +252,7 @@ export const useNavigationStore = create<NavigationState>()(
 
 1. `packages/core/navigation/store.ts:28` —— 把 `createPersistStorage(defaultStorage)` 改成 `createWorkspaceAwareStorage(defaultStorage)`
 2. 同文件在末尾加：`registerForWorkspaceRehydration(() => useNavigationStore.persist.rehydrate());`
-3. `packages/core/platform/storage-cleanup.ts:10-19` 的 `WORKSPACE_SCOPED_KEYS` 数组里加 `"multica_navigation"`
+3. `packages/core/platform/storage-cleanup.ts:10-19` 的 `WORKSPACE_SCOPED_KEYS` 数组里加 `"aurion_navigation"`
 
 **可选**：清理 `packages/views/layout/app-sidebar.tsx:285` 的 `push("/issues")` workaround（改完之后不再需要）。
 

@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigationStore } from "@multica/core/navigation";
-import { useAuthStore } from "@multica/core/auth";
-import { useCurrentWorkspace, paths } from "@multica/core/paths";
-import { workspaceListOptions } from "@multica/core/workspace";
+import { useNavigationStore } from "@aurion/core/navigation";
+import { useAuthStore } from "@aurion/core/auth";
+import { useCurrentWorkspace, paths } from "@aurion/core/paths";
+import { workspaceListOptions } from "@aurion/core/workspace";
 import { useNavigation } from "../navigation";
 
 /**

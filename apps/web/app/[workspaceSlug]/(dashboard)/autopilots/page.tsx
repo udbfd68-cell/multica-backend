@@ -1,6 +1,6 @@
 "use client";
 
-import { AutopilotsPage } from "@multica/views/autopilots/components";
+import { AutopilotsPage } from "@aurion/views/autopilots/components";
 
 export default function Page() {
   return <AutopilotsPage />;

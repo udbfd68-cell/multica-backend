@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@multica/ui/components/ui/button";
-import { paths } from "@multica/core/paths";
+import { Button } from "@aurion/ui/components/ui/button";
+import { paths } from "@aurion/core/paths";
 import { useNavigation } from "../navigation";
 import { useLogout } from "../auth";
 

@@ -44,7 +44,7 @@ func (b *openclawBackend) Execute(ctx context.Context, prompt string, opts ExecO
 
 	sessionID := opts.ResumeSessionID
 	if sessionID == "" {
-		sessionID = fmt.Sprintf("multica-%d", time.Now().UnixNano())
+		sessionID = fmt.Sprintf("aurion-%d", time.Now().UnixNano())
 	}
 	args := []string{"agent", "--local", "--json", "--session-id", sessionID}
 	if opts.Model != "" {

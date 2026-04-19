@@ -1,7 +1,7 @@
 "use client";
 
-import { ActorAvatar as ActorAvatarBase } from "@multica/ui/components/common/actor-avatar";
-import { useActorName } from "@multica/core/workspace/hooks";
+import { ActorAvatar as ActorAvatarBase } from "@aurion/ui/components/common/actor-avatar";
+import { useActorName } from "@aurion/core/workspace/hooks";
 
 interface ActorAvatarProps {
   actorType: string;

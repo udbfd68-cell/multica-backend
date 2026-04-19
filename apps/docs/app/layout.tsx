@@ -8,11 +8,11 @@ import { source } from "@/lib/source";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Multica Docs",
-    default: "Multica Docs",
+    template: "%s | Aurion Docs",
+    default: "Aurion Docs",
   },
   description:
-    "Documentation for Multica — the open-source managed agents platform.",
+    "Documentation for Aurion — the open-source managed agents platform.",
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

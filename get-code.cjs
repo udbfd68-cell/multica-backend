@@ -43,7 +43,7 @@ const req = https.request(url, {
 
     if (codes.length === 0) {
       console.log(`No verification code found for ${email} in recent logs.`);
-      console.log('Make sure you requested a code first on https://multica-main.vercel.app');
+      console.log('Make sure you requested a code first on https://aurion-main.vercel.app');
     } else {
       console.log(`Latest verification code for ${email}:`);
       console.log(`  Code: ${codes[0].code}`);

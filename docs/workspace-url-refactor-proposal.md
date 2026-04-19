@@ -14,7 +14,7 @@
 
 1. **分享链接不可靠**（MUL-43）：`/issues/abc` 发给另一个成员，会用他自己 localStorage 里的 workspace 去解析，导致 404 或看到错误 workspace 的数据
 2. **手机端无法切 workspace**（MUL-509）：切换只靠 sidebar UI，手机端不展开 sidebar 就没有切换入口
-3. **多 tab 互相覆盖**：`multica_workspace_id` 是全局 localStorage key，两个 tab 打开不同 workspace 会互相污染
+3. **多 tab 互相覆盖**：`aurion_workspace_id` 是全局 localStorage key，两个 tab 打开不同 workspace 会互相污染
 
 除了这 3 个显性 bug，架构上的"多份 workspace 状态拷贝互相同步"也带来一些隐性问题（创建 workspace 闪页、切换 workspace 时 cache 竞态等），积累时间越长后续改动越难。
 
@@ -36,13 +36,13 @@
 初看以为只是"URL 前缀加个 slug"，调研后发现必须一起做的事情有：
 
 1. **URL 路由重组**：web 端所有 dashboard 路由迁到 `app/[workspaceSlug]/(dashboard)/*`；desktop 端所有 react-router 路由加 `/:workspaceSlug` 前缀
-2. **状态管理清理**：删除 `useWorkspaceStore.workspace` 作为独立状态，改为从 URL 派生；删除 `hydrateWorkspace` / `switchWorkspace` actions（切 workspace 变成纯导航）；删除 `localStorage["multica_workspace_id"]`
+2. **状态管理清理**：删除 `useWorkspaceStore.workspace` 作为独立状态，改为从 URL 派生；删除 `hydrateWorkspace` / `switchWorkspace` actions（切 workspace 变成纯导航）；删除 `localStorage["aurion_workspace_id"]`
 3. **所有路径引用替换**：`push("/issues")` 改为 path builder（`paths.issues()`），影响 ~25 个组件文件
 4. **Mutation 副作用重构**：`useCreateWorkspace` / `useLeaveWorkspace` / `useDeleteWorkspace` 里的 `switchWorkspace` 调用全部移除（这些调用正是 MUL-727 闪页、MUL-728 删除后不跳转、MUL-820 接受邀请不切 workspace 等一系列 bug 的根因）
 5. **桌面端 tab 系统适配**：tab 路径天然包含 workspace，切 workspace = 开新 tab 或导航，不再有全局切换动作
-6. **Shareable URL 修复**：桌面端 `getShareableUrl` 当前生成 `https://www.multica.ai/issues/abc`（缺 slug），需要更新
+6. **Shareable URL 修复**：桌面端 `getShareableUrl` 当前生成 `https://www.aurion.studio/issues/abc`（缺 slug），需要更新
 7. **后端保留词校验**：slug 不能和前端顶级路由冲突（`login`、`onboarding`、`invite`、`api`、`settings` 等），后端创建时校验
-8. **内部 markdown 链接兼容**：issue 评论里写的 `[foo](/issues/abc)` 触发的 `multica:navigate` 事件需要自动补当前 workspace slug
+8. **内部 markdown 链接兼容**：issue 评论里写的 `[foo](/issues/abc)` 触发的 `aurion:navigate` 事件需要自动补当前 workspace slug
 
 ### 不需要改的（边界已确认）
 
@@ -50,7 +50,7 @@
 - `mention://type/id` 协议 — 只存 UUID，workspace-agnostic
 - CLI 登录 URL — `/login` 也是 pre-workspace，不需要 slug
 - 后端 API 路径 — 保持 `/api/workspaces/{id}`，slug 仅用于前端 URL
-- 桌面端 `multica://auth/callback` — 认证回调，不涉及 workspace
+- 桌面端 `aurion://auth/callback` — 认证回调，不涉及 workspace
 
 ## 三、方案要点
 

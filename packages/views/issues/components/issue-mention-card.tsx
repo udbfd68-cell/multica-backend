@@ -2,9 +2,9 @@
 
 import { AppLink } from "../../navigation";
 import { useQuery } from "@tanstack/react-query";
-import { issueListOptions, issueDetailOptions } from "@multica/core/issues/queries";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
+import { issueListOptions, issueDetailOptions } from "@aurion/core/issues/queries";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useWorkspacePaths } from "@aurion/core/paths";
 import { StatusIcon } from "./status-icon";
 
 interface IssueMentionCardProps {

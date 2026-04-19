@@ -3,9 +3,9 @@ import type { DataRouter } from "react-router-dom";
 import {
   NavigationProvider,
   type NavigationAdapter,
-} from "@multica/views/navigation";
-import { useAuthStore } from "@multica/core/auth";
-import { isReservedSlug } from "@multica/core/paths";
+} from "@aurion/views/navigation";
+import { useAuthStore } from "@aurion/core/auth";
+import { isReservedSlug } from "@aurion/core/paths";
 import {
   useTabStore,
   resolveRouteIcon,
@@ -18,7 +18,7 @@ import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 // Public web app URL — injected at build time via .env.production. Falls
 // back to the production host for dev builds so "Copy link" yields a URL
 // that actually points somewhere a teammate can open.
-const APP_URL = import.meta.env.VITE_APP_URL || "https://multica.ai";
+const APP_URL = import.meta.env.VITE_APP_URL || "https://aurion.studio";
 
 /**
  * Extract the leading workspace slug from a path, or null if the path isn't
@@ -173,7 +173,7 @@ function currentActiveTab() {
  * Per-tab navigation provider rendered inside each tab's Activity wrapper.
  * Subscribes to the tab's own router for up-to-date pathname.
  *
- * This is what @multica/views page components read via useNavigation().
+ * This is what @aurion/views page components read via useNavigation().
  */
 export function TabNavigationProvider({
   router,

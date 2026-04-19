@@ -2,16 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageSquare, Bot } from "lucide-react";
-import { cn } from "@multica/ui/lib/utils";
-import { Button } from "@multica/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@multica/ui/components/ui/avatar";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { agentListOptions } from "@multica/core/workspace/queries";
-import { allChatSessionsOptions } from "@multica/core/chat/queries";
-import { useChatStore } from "@multica/core/chat";
-import { createLogger } from "@multica/core/logger";
-import type { ChatSession, Agent } from "@multica/core/types";
+import { cn } from "@aurion/ui/lib/utils";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@aurion/ui/components/ui/avatar";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { agentListOptions } from "@aurion/core/workspace/queries";
+import { allChatSessionsOptions } from "@aurion/core/chat/queries";
+import { useChatStore } from "@aurion/core/chat";
+import { createLogger } from "@aurion/core/logger";
+import type { ChatSession, Agent } from "@aurion/core/types";
 
 const logger = createLogger("chat.ui");
 

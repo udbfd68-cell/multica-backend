@@ -1,6 +1,6 @@
 "use client";
 
-import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
+import { AurionIcon } from "@aurion/ui/components/common/aurion-icon";
 
 /**
  * Full-screen workspace loader. Renders IN PLACE OF the dashboard during:
@@ -20,7 +20,7 @@ export function WorkspaceLoader({ name }: { name?: string | null }) {
       role="status"
     >
       <div className="flex flex-col items-center gap-4">
-        <MulticaIcon className="size-8 animate-pulse" />
+        <AurionIcon className="size-8 animate-pulse" />
         {name ? (
           <p className="text-sm text-muted-foreground">
             Loading <span className="font-medium text-foreground">{name}</span>…

@@ -1,5 +1,5 @@
 {
-  "name": "@multica/desktop",
+  "name": "@aurion/desktop",
   "version": "0.1.0",
   "private": true,
   "main": "./out/main/index.js",
@@ -26,9 +26,9 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@fontsource-variable/inter": "^5.2.5",
     "@fontsource/geist-mono": "^5.2.7",
-    "@multica/core": "workspace:*",
-    "@multica/ui": "workspace:*",
-    "@multica/views": "workspace:*",
+    "@aurion/core": "workspace:*",
+    "@aurion/ui": "workspace:*",
+    "@aurion/views": "workspace:*",
     "electron-updater": "^6.8.3",
     "fix-path": "^5.0.0",
     "react-router-dom": "^7.6.0",
@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^2.0.0",
-    "@multica/tsconfig": "workspace:*",
+    "@aurion/tsconfig": "workspace:*",
     "@tailwindcss/vite": "^4",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",

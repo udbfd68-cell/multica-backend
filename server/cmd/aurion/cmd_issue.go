@@ -1068,7 +1068,7 @@ type assigneeMatch struct {
 
 func resolveAssignee(ctx context.Context, client *cli.APIClient, name string) (string, string, error) {
 	if client.WorkspaceID == "" {
-		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set MULTICA_WORKSPACE_ID")
+		return "", "", fmt.Errorf("workspace ID is required to resolve assignees; use --workspace-id or set AURION_WORKSPACE_ID")
 	}
 
 	nameLower := strings.ToLower(name)

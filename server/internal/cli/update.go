@@ -23,10 +23,10 @@ type GitHubRelease struct {
 	HTMLURL string `json:"html_url"`
 }
 
-// FetchLatestRelease fetches the latest release tag from the multica GitHub repo.
+// FetchLatestRelease fetches the latest release tag from the aurion GitHub repo.
 func FetchLatestRelease() (*GitHubRelease, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/multica-ai/multica/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/aurion-ai/aurion/releases/latest", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func FetchLatestRelease() (*GitHubRelease, error) {
 	return &release, nil
 }
 
-// IsBrewInstall checks whether the running multica binary was installed via Homebrew.
+// IsBrewInstall checks whether the running aurion binary was installed via Homebrew.
 func IsBrewInstall() bool {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -82,10 +82,10 @@ func GetBrewPrefix() string {
 	return strings.TrimSpace(string(out))
 }
 
-// UpdateViaBrew runs `brew upgrade multica-ai/tap/multica`.
+// UpdateViaBrew runs `brew upgrade aurion-ai/tap/aurion`.
 // Returns the combined output and any error.
 func UpdateViaBrew() (string, error) {
-	cmd := exec.Command("brew", "upgrade", "multica-ai/tap/multica")
+	cmd := exec.Command("brew", "upgrade", "aurion-ai/tap/aurion")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("brew upgrade failed: %w", err)
@@ -106,7 +106,7 @@ func UpdateViaDownload(targetVersion string) (string, error) {
 		return "", fmt.Errorf("resolve symlink: %w", err)
 	}
 
-	// Build download URL: multica_{os}_{arch}.{tar.gz|zip}
+	// Build download URL: aurion_{os}_{arch}.{tar.gz|zip}
 	// GoReleaser produces .zip for Windows and .tar.gz for everything else.
 	tag := targetVersion
 	if !strings.HasPrefix(tag, "v") {
@@ -116,8 +116,8 @@ func UpdateViaDownload(targetVersion string) (string, error) {
 	if runtime.GOOS == "windows" {
 		ext = "zip"
 	}
-	assetName := fmt.Sprintf("multica_%s_%s.%s", runtime.GOOS, runtime.GOARCH, ext)
-	downloadURL := fmt.Sprintf("https://github.com/multica-ai/multica/releases/download/%s/%s", tag, assetName)
+	assetName := fmt.Sprintf("aurion_%s_%s.%s", runtime.GOOS, runtime.GOARCH, ext)
+	downloadURL := fmt.Sprintf("https://github.com/aurion-ai/aurion/releases/download/%s/%s", tag, assetName)
 
 	// Download the archive.
 	client := &http.Client{Timeout: 120 * time.Second}
@@ -132,9 +132,9 @@ func UpdateViaDownload(targetVersion string) (string, error) {
 	}
 
 	// Extract the binary from the archive.
-	binaryName := "multica"
+	binaryName := "aurion"
 	if runtime.GOOS == "windows" {
-		binaryName = "multica.exe"
+		binaryName = "aurion.exe"
 	}
 	var binaryData []byte
 	if runtime.GOOS == "windows" {
@@ -148,7 +148,7 @@ func UpdateViaDownload(targetVersion string) (string, error) {
 
 	// Atomic replace: write to temp file, then rename over the original.
 	dir := filepath.Dir(exePath)
-	tmpFile, err := os.CreateTemp(dir, "multica-update-*")
+	tmpFile, err := os.CreateTemp(dir, "aurion-update-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

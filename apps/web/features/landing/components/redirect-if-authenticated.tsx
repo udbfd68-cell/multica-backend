@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { workspaceListOptions } from "@multica/core/workspace";
-import { paths } from "@multica/core/paths";
+import { useAuthStore } from "@aurion/core/auth";
+import { workspaceListOptions } from "@aurion/core/workspace";
+import { paths } from "@aurion/core/paths";
 
 /**
  * Client-side fallback redirect for authenticated visitors on the landing page.

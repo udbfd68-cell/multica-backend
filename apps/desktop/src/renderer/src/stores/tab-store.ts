@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { arrayMove } from "@dnd-kit/sortable";
-import { createPersistStorage, defaultStorage } from "@multica/core/platform";
-import { createSafeId } from "@multica/core/utils";
-import { isReservedSlug } from "@multica/core/paths";
+import { createPersistStorage, defaultStorage } from "@aurion/core/platform";
+import { createSafeId } from "@aurion/core/utils";
+import { isReservedSlug } from "@aurion/core/paths";
 import type { DataRouter } from "react-router-dom";
 import { createTabRouter } from "../routes";
 
@@ -478,7 +478,7 @@ export const useTabStore = create<TabStore>()(
       },
     }),
     {
-      name: "multica_tabs",
+      name: "aurion_tabs",
       version: 2,
       storage: createJSONStorage(() => createPersistStorage(defaultStorage)),
       migrate: (persistedState, version) => {

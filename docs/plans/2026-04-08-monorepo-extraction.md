@@ -69,7 +69,7 @@
 **base.json** — strict, ESNext, bundler resolution, declaration maps.
 **react-library.json** — extends base, adds jsx: react-jsx and DOM lib.
 
-All other packages will `"extends": "@multica/tsconfig/react-library.json"`.
+All other packages will `"extends": "@aurion/tsconfig/react-library.json"`.
 
 **Commit:** `chore: add shared TypeScript config package`
 
@@ -88,8 +88,8 @@ These are leftover empty dirs (only contain node_modules).
 ### Task 4: Scaffold + move types/utils/logger
 
 **Files:**
-- Create: `packages/core/package.json` (name: @multica/core, deps: react, zustand, @tanstack/react-query, sonner)
-- Create: `packages/core/tsconfig.json` (extends @multica/tsconfig/react-library.json)
+- Create: `packages/core/package.json` (name: @aurion/core, deps: react, zustand, @tanstack/react-query, sonner)
+- Create: `packages/core/tsconfig.json` (extends @aurion/tsconfig/react-library.json)
 - Move: `apps/web/shared/types/` → `packages/core/types/` (11 files, no changes needed)
 - Move: `apps/web/shared/logger.ts` → `packages/core/logger.ts` (no changes)
 - Move: `apps/web/shared/utils.ts` → `packages/core/utils.ts` (no changes)
@@ -194,25 +194,25 @@ All changes: `@/shared/api` → `../api`, `@/shared/types` → `../types`, `@cor
 
 | Pattern | Replacement |
 |---|---|
-| `@/shared/types` | `@multica/core/types` |
+| `@/shared/types` | `@aurion/core/types` |
 | `@/shared/api"` (singleton usage) | `@/platform/api"` |
-| `@/shared/logger` | `@multica/core/logger` |
-| `@/shared/utils` | `@multica/core/utils` |
-| `@/shared/hooks/` | `@multica/core/hooks/` |
-| `@core/` | `@multica/core/` |
+| `@/shared/logger` | `@aurion/core/logger` |
+| `@/shared/utils` | `@aurion/core/utils` |
+| `@/shared/hooks/` | `@aurion/core/hooks/` |
+| `@core/` | `@aurion/core/` |
 | `@/features/auth"` (useAuthStore) | `@/platform/auth"` |
 | `@/features/workspace"` (useWorkspaceStore) | `@/platform/workspace"` |
-| `@/features/workspace"` (useActorName) | `@multica/core/workspace/hooks"` |
-| `@/features/realtime` | `@multica/core/realtime` |
-| `@/features/navigation` | `@multica/core/navigation` |
-| `@/features/modals"` (store) | `@multica/core/modals"` |
-| `@/features/issues/store` | `@multica/core/issues` |
-| `@/features/issues/stores/` | `@multica/core/issues/stores/` |
-| `@/features/issues/config` | `@multica/core/issues/config` |
+| `@/features/workspace"` (useActorName) | `@aurion/core/workspace/hooks"` |
+| `@/features/realtime` | `@aurion/core/realtime` |
+| `@/features/navigation` | `@aurion/core/navigation` |
+| `@/features/modals"` (store) | `@aurion/core/modals"` |
+| `@/features/issues/store` | `@aurion/core/issues` |
+| `@/features/issues/stores/` | `@aurion/core/issues/stores/` |
+| `@/features/issues/config` | `@aurion/core/issues/config` |
 
 **Also:**
-- Add `"@multica/core": "workspace:*"` to `apps/web/package.json`
-- Add `transpilePackages: ["@multica/core"]` to `next.config.ts`
+- Add `"@aurion/core": "workspace:*"` to `apps/web/package.json`
+- Add `transpilePackages: ["@aurion/core"]` to `next.config.ts`
 - Remove `"@core/*"` alias from `apps/web/tsconfig.json`
 
 **Delete old files:**
@@ -237,7 +237,7 @@ features/issues/store.ts, features/issues/stores/, features/issues/config/
 ### Task 11: Scaffold packages/ui/
 
 **Files:**
-- Create: `packages/ui/package.json` (name: @multica/ui, deps: all @radix-ui/*, clsx, tailwind-merge, lucide-react, emoji-mart, react-markdown, shiki, etc.)
+- Create: `packages/ui/package.json` (name: @aurion/ui, deps: all @radix-ui/*, clsx, tailwind-merge, lucide-react, emoji-mart, react-markdown, shiki, etc.)
 - Create: `packages/ui/tsconfig.json` (extends shared config, with `@/lib/utils`, `@/hooks/*`, `@/components/ui/*` path aliases for internal shadcn imports)
 - Create: `packages/ui/components.json` (shadcn config for this package)
 
@@ -255,7 +255,7 @@ features/issues/store.ts, features/issues/stores/, features/issues/config/
 ### Task 13: Extract CSS tokens
 
 - Copy `@theme inline { ... }` + `:root` + `.dark` blocks from `globals.css` → `packages/ui/styles/tokens.css`
-- Update `globals.css`: replace inline tokens with `@import "@multica/ui/styles/tokens.css"` + add `@source` directives for packages
+- Update `globals.css`: replace inline tokens with `@import "@aurion/ui/styles/tokens.css"` + add `@source` directives for packages
 
 ---
 
@@ -291,22 +291,22 @@ All go to `packages/ui/markdown/`.
 
 | Pattern | Replacement |
 |---|---|
-| `@/components/ui/` | `@multica/ui/components/ui/` |
-| `@/components/common/` | `@multica/ui/components/common/` |
-| `@/components/markdown` | `@multica/ui/markdown` |
-| `@/lib/utils` | `@multica/ui/lib/utils` |
-| `@/hooks/use-mobile` | `@multica/ui/hooks/use-mobile` |
-| `@/hooks/use-auto-scroll` | `@multica/ui/hooks/use-auto-scroll` |
-| `@/hooks/use-scroll-fade` | `@multica/ui/hooks/use-scroll-fade` |
+| `@/components/ui/` | `@aurion/ui/components/ui/` |
+| `@/components/common/` | `@aurion/ui/components/common/` |
+| `@/components/markdown` | `@aurion/ui/markdown` |
+| `@/lib/utils` | `@aurion/ui/lib/utils` |
+| `@/hooks/use-mobile` | `@aurion/ui/hooks/use-mobile` |
+| `@/hooks/use-auto-scroll` | `@aurion/ui/hooks/use-auto-scroll` |
+| `@/hooks/use-scroll-fade` | `@aurion/ui/hooks/use-scroll-fade` |
 
 **Also:**
-- Add `"@multica/ui": "workspace:*"` to `apps/web/package.json`
-- Add `"@multica/ui"` to `transpilePackages` in `next.config.ts`
-- Update `apps/web/components.json` aliases to point to `@multica/ui`
+- Add `"@aurion/ui": "workspace:*"` to `apps/web/package.json`
+- Add `"@aurion/ui"` to `transpilePackages` in `next.config.ts`
+- Update `apps/web/components.json` aliases to point to `@aurion/ui`
 
 **Delete:** `components/ui/`, `components/common/`, `components/markdown/`, `hooks/`, `lib/utils.ts`
 
-**Keep:** `components/{theme-provider,theme-toggle,multica-icon,loading-indicator,spinner,locale-sync}.tsx`
+**Keep:** `components/{theme-provider,theme-toggle,aurion-icon,loading-indicator,spinner,locale-sync}.tsx`
 
 **Verify:** `pnpm typecheck && pnpm test`
 
@@ -319,7 +319,7 @@ All go to `packages/ui/markdown/`.
 ### Task 17: Create navigation adapter
 
 **New files (all new code, ~60 lines total):**
-- `packages/views/package.json` (deps: @multica/core, @multica/ui, @dnd-kit/*, @tiptap/*, sonner, recharts)
+- `packages/views/package.json` (deps: @aurion/core, @aurion/ui, @dnd-kit/*, @tiptap/*, sonner, recharts)
 - `packages/views/tsconfig.json`
 - `packages/views/navigation/types.ts` — `NavigationAdapter` interface (push, replace, back, pathname, searchParams)
 - `packages/views/navigation/context.tsx` — `NavigationProvider` + `useNavigation()` hook
@@ -376,7 +376,7 @@ Move logic from page.tsx files into packages/views/:
 Each original page.tsx becomes a 3-line thin shell:
 ```typescript
 "use client";
-import { AgentsPage } from "@multica/views/agents";
+import { AgentsPage } from "@aurion/views/agents";
 export default function Page() { return <AgentsPage />; }
 ```
 
@@ -390,17 +390,17 @@ Login page: pass `googleClientId` as prop instead of reading env var.
 
 | Pattern | Replacement |
 |---|---|
-| `@/features/issues/components` | `@multica/views/issues/components` |
-| `@/features/issues/hooks/` | `@multica/views/issues/hooks/` |
-| `@/features/editor` | `@multica/views/editor` |
-| `@/features/modals/` (components) | `@multica/views/modals/` |
-| `@/features/my-issues` | `@multica/views/my-issues` |
-| `@/features/skills` | `@multica/views/skills` |
-| `@/features/runtimes` | `@multica/views/runtimes` |
+| `@/features/issues/components` | `@aurion/views/issues/components` |
+| `@/features/issues/hooks/` | `@aurion/views/issues/hooks/` |
+| `@/features/editor` | `@aurion/views/editor` |
+| `@/features/modals/` (components) | `@aurion/views/modals/` |
+| `@/features/my-issues` | `@aurion/views/my-issues` |
+| `@/features/skills` | `@aurion/views/skills` |
+| `@/features/runtimes` | `@aurion/views/runtimes` |
 
 **Also:**
-- Add `"@multica/views": "workspace:*"` to `apps/web/package.json`
-- Add `"@multica/views"` to `transpilePackages`
+- Add `"@aurion/views": "workspace:*"` to `apps/web/package.json`
+- Add `"@aurion/views"` to `transpilePackages`
 - Add `@source "../../packages/views/**/*.tsx"` to `globals.css`
 
 **Delete old feature files.**
@@ -418,7 +418,7 @@ make check                    # typecheck + unit tests + Go tests + E2E
 cd apps/web && npx shadcn@latest add --dry-run badge   # shadcn CLI works
 
 # Package constraints
-grep -r "@multica/core" packages/ui/ || echo "PASS: ui/ has zero core imports"
+grep -r "@aurion/core" packages/ui/ || echo "PASS: ui/ has zero core imports"
 grep -r "react-dom" packages/core/ || echo "PASS: core/ has zero react-dom"
 grep -r "from \"next/" packages/views/ || echo "PASS: views/ has zero next/* imports"
 ```
@@ -430,10 +430,10 @@ grep -r "from \"next/" packages/views/ || echo "PASS: views/ has zero next/* imp
 ## Final Directory Structure
 
 ```
-multica/
+aurion/
 ├── packages/
 │   ├── tsconfig/          # Shared TS config
-│   ├── core/              # @multica/core — 三端共用 (零 react-dom)
+│   ├── core/              # @aurion/core — 三端共用 (零 react-dom)
 │   │   ├── api/           #   ApiClient class + WSClient
 │   │   ├── types/         #   所有领域类型
 │   │   ├── auth/          #   createAuthStore factory
@@ -445,14 +445,14 @@ multica/
 │   │   ├── navigation/    #   useNavigationStore
 │   │   ├── modals/        #   useModalStore
 │   │   └── hooks.ts       #   useWorkspaceId (Context-based)
-│   ├── ui/                # @multica/ui — Web+Desktop 共用 (零业务逻辑)
+│   ├── ui/                # @aurion/ui — Web+Desktop 共用 (零业务逻辑)
 │   │   ├── components/ui/ #   56 shadcn 组件
 │   │   ├── components/common/ # actor-avatar, emoji-picker... (纯 props)
 │   │   ├── markdown/      #   Markdown, StreamingMarkdown (renderMention slot)
 │   │   ├── hooks/         #   use-auto-scroll, use-mobile, use-scroll-fade
 │   │   ├── lib/utils.ts   #   cn()
 │   │   └── styles/tokens.css
-│   └── views/             # @multica/views — Web+Desktop 共用页面
+│   └── views/             # @aurion/views — Web+Desktop 共用页面
 │       ├── navigation/    #   NavigationAdapter + AppLink
 │       ├── issues/        #   IssuesPage, IssueDetail, BoardView...
 │       ├── editor/        #   ContentEditor, TitleEditor
@@ -470,7 +470,7 @@ multica/
 │       ├── features/
 │       │   ├── auth/      #   auth-cookie.ts (Web 独有) + initializer.tsx
 │       │   └── landing/   #   Landing 页面 (Web 独有, 用 next/image)
-│       └── components/    #   theme-provider, multica-icon 等 app 级组件
+│       └── components/    #   theme-provider, aurion-icon 等 app 级组件
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```

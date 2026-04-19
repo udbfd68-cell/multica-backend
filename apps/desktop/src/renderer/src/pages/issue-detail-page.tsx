@@ -1,8 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { IssueDetail } from "@multica/views/issues/components";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { issueDetailOptions } from "@multica/core/issues/queries";
+import { IssueDetail } from "@aurion/views/issues/components";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { issueDetailOptions } from "@aurion/core/issues/queries";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export function IssueDetailPage() {

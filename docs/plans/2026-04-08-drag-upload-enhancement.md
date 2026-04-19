@@ -34,14 +34,14 @@
 
 ## What We Add (new)
 
-**File Card Node** — a Tiptap custom node that renders `[name](url)` as a styled card when the URL matches our CDN (`multica-static.copilothub.ai` or S3 bucket domain).
+**File Card Node** — a Tiptap custom node that renders `[name](url)` as a styled card when the URL matches our CDN (`aurion-static.copilothub.ai` or S3 bucket domain).
 
 ```
 Editor view:        ┌──────────────────────────┐
                     │ 📄 report.pdf         ⬇  │
                     └──────────────────────────┘
 
-Markdown storage:   [report.pdf](https://multica-static.copilothub.ai/xxx.pdf)
+Markdown storage:   [report.pdf](https://aurion-static.copilothub.ai/xxx.pdf)
 ```
 
 - Only for non-image CDN URLs (images stay as `![](url)`)

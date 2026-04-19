@@ -3,9 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Minus, Maximize2, Minimize2, ChevronDown, Bot, Plus, Check } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@multica/ui/components/ui/avatar";
-import { Button } from "@multica/ui/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@aurion/ui/components/ui/avatar";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,27 +14,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@multica/ui/components/ui/dropdown-menu";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useAuthStore } from "@multica/core/auth";
-import { agentListOptions, memberListOptions } from "@multica/core/workspace/queries";
-import { canAssignAgent } from "@multica/views/issues/components";
-import { api } from "@multica/core/api";
+} from "@aurion/ui/components/ui/dropdown-menu";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useAuthStore } from "@aurion/core/auth";
+import { agentListOptions, memberListOptions } from "@aurion/core/workspace/queries";
+import { canAssignAgent } from "@aurion/views/issues/components";
+import { api } from "@aurion/core/api";
 import {
   chatSessionsOptions,
   allChatSessionsOptions,
   chatMessagesOptions,
   pendingChatTaskOptions,
   chatKeys,
-} from "@multica/core/chat/queries";
-import { useCreateChatSession, useMarkChatSessionRead } from "@multica/core/chat/mutations";
-import { useChatStore } from "@multica/core/chat";
+} from "@aurion/core/chat/queries";
+import { useCreateChatSession, useMarkChatSessionRead } from "@aurion/core/chat/mutations";
+import { useChatStore } from "@aurion/core/chat";
 import { ChatMessageList, ChatMessageSkeleton } from "./chat-message-list";
 import { ChatInput } from "./chat-input";
 import { ChatResizeHandles } from "./chat-resize-handles";
 import { useChatResize } from "./use-chat-resize";
-import { createLogger } from "@multica/core/logger";
-import type { Agent, ChatMessage, ChatSession } from "@multica/core/types";
+import { createLogger } from "@aurion/core/logger";
+import type { Agent, ChatMessage, ChatSession } from "@aurion/core/types";
 
 const uiLogger = createLogger("chat.ui");
 const apiLogger = createLogger("chat.api");
@@ -606,7 +606,7 @@ function EmptyState({
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-8">
       <div className="text-center space-y-1">
         <h3 className="text-base font-semibold">
-          {agentName ? `Hi, I'm ${agentName}` : "Welcome to Multica"}
+          {agentName ? `Hi, I'm ${agentName}` : "Welcome to Aurion"}
         </h3>
         <p className="text-sm text-muted-foreground">Try asking</p>
       </div>

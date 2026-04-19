@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Context
 
-Multica is an AI-native task management platform — like Linear, but with AI agents as first-class citizens.
+Aurion is an AI-native task management platform — like Linear, but with AI agents as first-class citizens.
 
 - Agents can be assigned issues, create issues, comment, and change status
 - Supports local (daemon) and cloud agent runtimes
@@ -79,16 +79,16 @@ pnpm test             # TS tests (Vitest, all packages + apps via turbo)
 make server           # Run Go server only (port 8080)
 make daemon           # Run local daemon
 make build            # Build server + CLI binaries to server/bin/
-make cli ARGS="..."   # Run multica CLI (e.g. make cli ARGS="config")
+make cli ARGS="..."   # Run aurion CLI (e.g. make cli ARGS="config")
 make test             # Go tests
 make sqlc             # Regenerate sqlc code after editing SQL in server/pkg/db/queries/
 make migrate-up       # Run database migrations
 make migrate-down     # Rollback migrations
 
 # Run a single TS test (works for any package with a test script)
-pnpm --filter @multica/views exec vitest run auth/login-page.test.tsx
-pnpm --filter @multica/core exec vitest run runtimes/version.test.ts
-pnpm --filter @multica/web exec vitest run app/\(auth\)/login/page.test.tsx
+pnpm --filter @aurion/views exec vitest run auth/login-page.test.tsx
+pnpm --filter @aurion/core exec vitest run runtimes/version.test.ts
+pnpm --filter @aurion/web exec vitest run app/\(auth\)/login/page.test.tsx
 
 # Run a single Go test
 cd server && go test ./internal/handler/ -run TestName
@@ -97,8 +97,8 @@ cd server && go test ./internal/handler/ -run TestName
 pnpm exec playwright test e2e/tests/specific-test.spec.ts
 
 # Desktop build & package
-pnpm --filter @multica/desktop build      # Compile TS → JS (reads .env.production)
-pnpm --filter @multica/desktop package    # Package into .app/.dmg/.exe (current platform only)
+pnpm --filter @aurion/desktop build      # Compile TS → JS (reads .env.production)
+pnpm --filter @aurion/desktop package    # Package into .app/.dmg/.exe (current platform only)
 
 # shadcn — config lives in packages/ui/components.json (Base UI variant, base-nova style)
 pnpm ui:add badge                # Adds component to packages/ui/components/ui/
@@ -140,7 +140,7 @@ make start-worktree     # Start using .env.worktree
 These are hard constraints. Violating them breaks the cross-platform architecture:
 
 - `packages/core/` — zero react-dom, zero localStorage (use StorageAdapter), zero process.env, zero UI libraries. **All shared Zustand stores live here**, even view-related ones (filters, view modes) — stores are pure state, not UI.
-- `packages/ui/` — zero `@multica/core` imports (pure UI, no business logic).
+- `packages/ui/` — zero `@aurion/core` imports (pure UI, no business logic).
 - `packages/views/` — zero `next/*` imports, zero `react-router-dom` imports, zero stores. Use `NavigationAdapter` for all routing.
 - `apps/web/platform/` — the only place for Next.js APIs (`next/navigation`).
 - `apps/desktop/src/renderer/src/platform/` — the only place for react-router-dom navigation wiring.
@@ -192,7 +192,7 @@ Every path in the desktop app falls into exactly one category. Choosing the wron
 
 ### Workspace identity singleton
 
-`setCurrentWorkspace(slug, uuid)` in `@multica/core/platform` is the single source of truth for "which workspace is active right now". Three consumers depend on it:
+`setCurrentWorkspace(slug, uuid)` in `@aurion/core/platform` is the single source of truth for "which workspace is active right now". Three consumers depend on it:
 
 1. API client's `X-Workspace-Slug` header.
 2. Zustand per-workspace storage namespace.
@@ -261,7 +261,7 @@ Tests follow the code, not the app. This is the most important testing principle
 | Platform-specific wiring (cookies, redirects, searchParams) | `apps/web/*.test.tsx` or `apps/desktop/` | Needs framework-specific mocks |
 | End-to-end user flows | `e2e/*.spec.ts` | Real browser, real backend |
 
-**Never test shared component behavior in an app's test file.** If a test requires mocking `next/navigation` or `react-router-dom` to test a component from `@multica/views`, the test is in the wrong place — move it to `packages/views/` and mock `@multica/core` instead.
+**Never test shared component behavior in an app's test file.** If a test requires mocking `next/navigation` or `react-router-dom` to test a component from `@aurion/views`, the test is in the wrong place — move it to `packages/views/` and mock `@aurion/core` instead.
 
 ### Test infrastructure
 
@@ -275,8 +275,8 @@ All test deps are in the pnpm catalog for unified versioning.
 
 ### Mocking conventions
 
-- Mock `@multica/core` stores with `vi.hoisted()` + `Object.assign(selectorFn, { getState })` pattern (Zustand stores are both callable and have `.getState()`).
-- Mock `@multica/core/api` for API calls.
+- Mock `@aurion/core` stores with `vi.hoisted()` + `Object.assign(selectorFn, { getState })` pattern (Zustand stores are both callable and have `.getState()`).
+- Mock `@aurion/core/api` for API calls.
 - In `packages/views/` tests: never mock `next/*` or `react-router-dom` — those don't exist here.
 - In `apps/web/` tests: mock framework-specific APIs only for platform-specific behavior.
 

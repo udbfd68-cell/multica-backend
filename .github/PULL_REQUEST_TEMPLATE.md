@@ -47,7 +47,7 @@ Closes #
 
 <!-- Most PRs involve AI coding tools — that's totally fine! We're curious about your process. -->
 
-**AI tool used:** <!-- e.g. Claude Code, Cursor, GitHub Copilot, Multica Agent, N/A -->
+**AI tool used:** <!-- e.g. Claude Code, Cursor, GitHub Copilot, Aurion Agent, N/A -->
 
 **Prompt / approach:**
 <!-- How did you use AI to produce this code? Share your prompt, conversation link, or describe your approach. This helps the team learn from each other's AI workflows. -->

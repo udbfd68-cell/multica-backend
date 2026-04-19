@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import type { AgentRuntime } from "@multica/core/types";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { memberListOptions } from "@multica/core/workspace/queries";
-import { useDeleteRuntime } from "@multica/core/runtimes/mutations";
-import { Button } from "@multica/ui/components/ui/button";
+import type { AgentRuntime } from "@aurion/core/types";
+import { useAuthStore } from "@aurion/core/auth";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { memberListOptions } from "@aurion/core/workspace/queries";
+import { useDeleteRuntime } from "@aurion/core/runtimes/mutations";
+import { Button } from "@aurion/ui/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@aurion/ui/components/ui/alert-dialog";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { formatLastSeen } from "../utils";
 import { StatusBadge, InfoField } from "./shared";

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Save } from "lucide-react";
-import type { Agent } from "@multica/core/types";
-import { Button } from "@multica/ui/components/ui/button";
+import type { Agent } from "@aurion/core/types";
+import { Button } from "@aurion/ui/components/ui/button";
 
 export function InstructionsTab({
   agent,

@@ -2,17 +2,17 @@
 
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@multica/core/api";
+import { api } from "@aurion/core/api";
 import {
   workspaceKeys,
   workspaceListOptions,
-} from "@multica/core/workspace/queries";
-import { paths } from "@multica/core/paths";
+} from "@aurion/core/workspace/queries";
+import { paths } from "@aurion/core/paths";
 import { useNavigation } from "../navigation";
 import { useLogout } from "../auth";
-import { Button } from "@multica/ui/components/ui/button";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Card, CardContent } from "@aurion/ui/components/ui/card";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
 import { ArrowLeft, LogOut, Users, Check, X } from "lucide-react";
 
 export interface InvitePageProps {

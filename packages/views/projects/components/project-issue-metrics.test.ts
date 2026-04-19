@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Issue } from "@multica/core/types";
+import type { Issue } from "@aurion/core/types";
 import { getProjectIssueMetrics } from "./project-issue-metrics";
 
 function makeIssue(overrides: Partial<Issue> = {}): Issue {

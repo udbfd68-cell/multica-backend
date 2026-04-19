@@ -18,7 +18,7 @@ func uuidToString(u pgtype.UUID) string { return util.UUIDToString(u) }
 // Auth middleware validates JWT tokens or Personal Access Tokens.
 // Token sources (in priority order):
 //  1. Authorization: Bearer <token> header (PAT or JWT)
-//  2. multica_auth HttpOnly cookie (JWT) — requires valid CSRF token for state-changing requests
+//  2. aurion_auth HttpOnly cookie (JWT) — requires valid CSRF token for state-changing requests
 //
 // Sets X-User-ID and X-User-Email headers on the request for downstream handlers.
 func Auth(queries *db.Queries) func(http.Handler) http.Handler {
@@ -98,7 +98,7 @@ func Auth(queries *db.Queries) func(http.Handler) http.Handler {
 }
 
 // extractToken returns the bearer token and whether it came from a cookie.
-// Priority: Authorization header > multica_auth cookie.
+// Priority: Authorization header > aurion_auth cookie.
 func extractToken(r *http.Request) (token string, fromCookie bool) {
 	if authHeader := r.Header.Get("Authorization"); authHeader != "" {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")

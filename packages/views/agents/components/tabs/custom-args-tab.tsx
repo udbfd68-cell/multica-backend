@@ -7,11 +7,11 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import type { Agent } from "@multica/core/types";
-import { createSafeId } from "@multica/core/utils";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
+import type { Agent } from "@aurion/core/types";
+import { createSafeId } from "@aurion/core/utils";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Label } from "@aurion/ui/components/ui/label";
 import { toast } from "sonner";
 
 interface ArgEntry {

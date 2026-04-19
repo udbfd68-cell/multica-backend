@@ -108,10 +108,10 @@ func init() {
 	})
 }
 
-var rootHelpTemplate = `Work seamlessly with Multica from the command line.
+var rootHelpTemplate = `Work seamlessly with Aurion from the command line.
 
 USAGE
-  multica <command> <subcommand> [flags]
+  aurion <command> <subcommand> [flags]
 {{range .Groups}}
 {{.Title}}
 {{formatCommandList (commandsInGroup $.Commands .ID)}}
@@ -119,17 +119,17 @@ USAGE
 FLAGS
 {{.LocalFlags.FlagUsages}}
 EXAMPLES
-  $ multica login
-  $ multica issue list --output json
-  $ multica daemon start
-  $ multica agent list --output json
+  $ aurion login
+  $ aurion issue list --output json
+  $ aurion daemon start
+  $ aurion agent list --output json
 
 ENVIRONMENT VARIABLES
-  MULTICA_SERVER_URL    Override the default server URL
-  MULTICA_WORKSPACE_ID  Set the active workspace
+  AURION_SERVER_URL    Override the default server URL
+  AURION_WORKSPACE_ID  Set the active workspace
 
 LEARN MORE
-  Use ` + "`multica <command> <subcommand> --help`" + ` for more information about a command.
+  Use ` + "`aurion <command> <subcommand> --help`" + ` for more information about a command.
 `
 
 var subHelpTemplate = `{{.Short}}
@@ -169,5 +169,5 @@ EXAMPLES
 {{- end}}
 
 LEARN MORE
-  Use ` + "`multica <command> <subcommand> --help`" + ` for more information about a command.
+  Use ` + "`aurion <command> <subcommand> --help`" + ` for more information about a command.
 `

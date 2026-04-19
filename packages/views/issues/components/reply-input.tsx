@@ -3,11 +3,11 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
 import { ContentEditor, type ContentEditorRef, useFileDropZone, FileDropOverlay } from "../../editor";
-import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
+import { FileUploadButton } from "@aurion/ui/components/common/file-upload-button";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { useFileUpload } from "@multica/core/hooks/use-file-upload";
-import { api } from "@multica/core/api";
-import { cn } from "@multica/ui/lib/utils";
+import { useFileUpload } from "@aurion/core/hooks/use-file-upload";
+import { api } from "@aurion/core/api";
+import { cn } from "@aurion/ui/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types

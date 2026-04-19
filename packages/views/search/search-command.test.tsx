@@ -29,7 +29,7 @@ const {
   mockSetTheme: vi.fn(),
   mockTheme: { current: "system" as "light" | "dark" | "system" },
   mockPathname: { current: "/ws-test/issues" as string },
-  mockGetShareableUrl: vi.fn((p: string) => `https://app.multica/${p}`),
+  mockGetShareableUrl: vi.fn((p: string) => `https://app.aurion/${p}`),
   mockWorkspaces: {
     current: [] as Array<{ id: string; name: string; slug: string }>,
   },
@@ -41,25 +41,25 @@ const {
   mockClipboardWrite: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@aurion/core/api", () => ({
   api: {
     searchIssues: mockSearchIssues,
     searchProjects: mockSearchProjects,
   },
 }));
 
-vi.mock("@multica/core/issues/stores", () => ({
+vi.mock("@aurion/core/issues/stores", () => ({
   useRecentIssuesStore: (selector?: (state: { items: typeof mockRecentItems.current }) => unknown) => {
     const state = { items: mockRecentItems.current };
     return selector ? selector(state) : state;
   },
 }));
 
-vi.mock("@multica/core", () => ({
+vi.mock("@aurion/core", () => ({
   useWorkspaceId: () => "ws-test",
 }));
 
-vi.mock("@multica/core/paths", () => ({
+vi.mock("@aurion/core/paths", () => ({
   paths: {
     workspace: (slug: string) => ({
       issues: () => `/${slug}/issues`,
@@ -80,15 +80,15 @@ vi.mock("@multica/core/paths", () => ({
   }),
 }));
 
-vi.mock("@multica/core/issues/queries", () => ({
+vi.mock("@aurion/core/issues/queries", () => ({
   issueListOptions: () => ({ queryKey: ["issues", "ws-test", "list"], enabled: false }),
 }));
 
-vi.mock("@multica/core/workspace/queries", () => ({
+vi.mock("@aurion/core/workspace/queries", () => ({
   workspaceListOptions: () => ({ queryKey: ["workspaces", "list"], enabled: false }),
 }));
 
-vi.mock("@multica/core/modals", () => ({
+vi.mock("@aurion/core/modals", () => ({
   useModalStore: Object.assign(vi.fn(), {
     getState: () => ({ open: mockOpenModal }),
   }),
@@ -110,7 +110,7 @@ vi.mock("../navigation", () => ({
   }),
 }));
 
-vi.mock("@multica/ui/components/common/theme-provider", () => ({
+vi.mock("@aurion/ui/components/common/theme-provider", () => ({
   useTheme: () => ({ theme: mockTheme.current, setTheme: mockSetTheme }),
 }));
 
@@ -128,7 +128,7 @@ describe("SearchCommand", () => {
     mockSetTheme.mockReset();
     mockTheme.current = "system";
     mockPathname.current = "/ws-test/issues";
-    mockGetShareableUrl.mockReset().mockImplementation((p: string) => `https://app.multica/${p}`);
+    mockGetShareableUrl.mockReset().mockImplementation((p: string) => `https://app.aurion/${p}`);
     mockWorkspaces.current = [];
     mockCurrentWorkspace.current = null;
     mockOpenModal.mockReset();
@@ -285,7 +285,7 @@ describe("SearchCommand", () => {
     await user.click(linkItem);
 
     expect(mockGetShareableUrl).toHaveBeenCalledWith("/ws-test/issues/issue-1");
-    expect(mockClipboardWrite).toHaveBeenCalledWith("https://app.multica//ws-test/issues/issue-1");
+    expect(mockClipboardWrite).toHaveBeenCalledWith("https://app.aurion//ws-test/issues/issue-1");
     expect(mockToastSuccess).toHaveBeenCalledWith("Link copied");
 
     // Reopen palette and test identifier copy

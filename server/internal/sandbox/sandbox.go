@@ -20,7 +20,7 @@ import (
 type Config struct {
 	// SessionID is used to create a unique workdir.
 	SessionID string
-	// BaseDir is the parent for per-session directories (default /tmp/multica-sandbox).
+	// BaseDir is the parent for per-session directories (default /tmp/aurion-sandbox).
 	BaseDir string
 	// NetDisabled drops network access inside the sandbox (Linux only).
 	NetDisabled bool
@@ -49,7 +49,7 @@ var defaultDangerous = []string{
 // The work directory is created on disk immediately.
 func New(cfg Config) (*Sandbox, error) {
 	if cfg.BaseDir == "" {
-		cfg.BaseDir = "/tmp/multica-sandbox"
+		cfg.BaseDir = "/tmp/aurion-sandbox"
 	}
 	if cfg.MaxOutputBytes <= 0 {
 		cfg.MaxOutputBytes = 50_000

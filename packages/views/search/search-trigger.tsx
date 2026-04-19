@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { SidebarMenuButton } from "@multica/ui/components/ui/sidebar";
+import { SidebarMenuButton } from "@aurion/ui/components/ui/sidebar";
 import { useSearchStore } from "./search-store";
 
 export function SearchTrigger() {

@@ -1,5 +1,5 @@
 {
-  "name": "@multica/core",
+  "name": "@aurion/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -74,7 +74,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@multica/tsconfig": "workspace:*",
+    "@aurion/tsconfig": "workspace:*",
     "@types/react": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

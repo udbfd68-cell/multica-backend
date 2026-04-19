@@ -26,27 +26,27 @@ import {
 import { Command as CommandPrimitive } from "cmdk";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { SearchIssueResult, SearchProjectResult } from "@multica/core/types";
-import { api } from "@multica/core/api";
-import { useRecentIssuesStore } from "@multica/core/issues/stores";
-import { issueListOptions } from "@multica/core/issues/queries";
-import { useWorkspaceId } from "@multica/core";
-import { paths, useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
-import type { WorkspacePaths } from "@multica/core/paths";
-import { useModalStore } from "@multica/core/modals";
-import { workspaceListOptions } from "@multica/core/workspace/queries";
+import type { SearchIssueResult, SearchProjectResult } from "@aurion/core/types";
+import { api } from "@aurion/core/api";
+import { useRecentIssuesStore } from "@aurion/core/issues/stores";
+import { issueListOptions } from "@aurion/core/issues/queries";
+import { useWorkspaceId } from "@aurion/core";
+import { paths, useCurrentWorkspace, useWorkspacePaths } from "@aurion/core/paths";
+import type { WorkspacePaths } from "@aurion/core/paths";
+import { useModalStore } from "@aurion/core/modals";
+import { workspaceListOptions } from "@aurion/core/workspace/queries";
 import { StatusIcon } from "../issues/components";
-import { STATUS_CONFIG } from "@multica/core/issues/config";
-import { PROJECT_STATUS_CONFIG } from "@multica/core/projects/config";
-import type { ProjectStatus } from "@multica/core/types";
+import { STATUS_CONFIG } from "@aurion/core/issues/config";
+import { PROJECT_STATUS_CONFIG } from "@aurion/core/projects/config";
+import type { ProjectStatus } from "@aurion/core/types";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@multica/ui/components/ui/dialog";
-import { useTheme } from "@multica/ui/components/common/theme-provider";
+} from "@aurion/ui/components/ui/dialog";
+import { useTheme } from "@aurion/ui/components/common/theme-provider";
 import { useNavigation } from "../navigation";
 import { useSearchStore } from "./search-store";
 

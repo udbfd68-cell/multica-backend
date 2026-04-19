@@ -469,7 +469,7 @@ func (e *Executor) execWebSearch(ctx context.Context, input map[string]any) (str
 	if err != nil {
 		return "failed to create request: " + err.Error(), true
 	}
-	req.Header.Set("User-Agent", "Multica-Agent/1.0")
+	req.Header.Set("User-Agent", "Aurion-Agent/1.0")
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)

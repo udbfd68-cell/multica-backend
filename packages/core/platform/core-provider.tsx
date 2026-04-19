@@ -30,19 +30,19 @@ function initCore(
   const api = new ApiClient(apiBaseUrl, {
     logger: createLogger("api"),
     onUnauthorized: () => {
-      storage.removeItem("multica_token");
+      storage.removeItem("aurion_token");
     },
   });
   setApiInstance(api);
 
   // In token mode, hydrate token from storage.
   if (!cookieAuth) {
-    let token = storage.getItem("multica_token");
+    let token = storage.getItem("aurion_token");
     // Auto-login: NEXT_PUBLIC_AUTO_TOKEN is inlined at build time by Next.js.
     const autoToken = process.env.NEXT_PUBLIC_AUTO_TOKEN ?? "";
     if (!token && autoToken) {
       token = autoToken.trim();
-      storage.setItem("multica_token", token);
+      storage.setItem("aurion_token", token);
     }
     if (token) api.setToken(token);
   }

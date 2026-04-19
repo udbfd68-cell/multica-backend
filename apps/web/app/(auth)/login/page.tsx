@@ -3,12 +3,12 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { paths } from "@multica/core/paths";
-import type { Workspace } from "@multica/core/types";
+import { useAuthStore } from "@aurion/core/auth";
+import { workspaceKeys } from "@aurion/core/workspace/queries";
+import { paths } from "@aurion/core/paths";
+import type { Workspace } from "@aurion/core/types";
 import { setLoggedInCookie } from "@/features/auth/auth-cookie";
-import { LoginPage, validateCliCallback } from "@multica/views/auth";
+import { LoginPage, validateCliCallback } from "@aurion/views/auth";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 

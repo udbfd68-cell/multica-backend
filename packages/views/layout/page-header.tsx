@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@multica/ui/lib/utils";
-import { SidebarTrigger, useSidebar } from "@multica/ui/components/ui/sidebar";
+import { cn } from "@aurion/ui/lib/utils";
+import { SidebarTrigger, useSidebar } from "@aurion/ui/components/ui/sidebar";
 
 function MobileSidebarTrigger() {
   try {

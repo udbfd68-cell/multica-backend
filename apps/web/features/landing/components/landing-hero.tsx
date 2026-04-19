@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useAuthStore } from "@multica/core/auth";
+import { useAuthStore } from "@aurion/core/auth";
 import { useLocale } from "../i18n";
 import {
   ClaudeCodeLogo,
@@ -42,7 +42,7 @@ export function LandingHero() {
                 {user ? t.header.dashboard : t.hero.cta}
               </Link>
               <Link
-                href="https://github.com/multica-ai/multica/releases/latest"
+                href="https://github.com/aurion-ai/aurion/releases/latest"
                 target="_blank"
                 rel="noreferrer"
                 className={heroButtonClassName("ghost")}

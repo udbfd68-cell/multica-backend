@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Create `apps/desktop/` Electron app that reuses `@multica/core`, `@multica/ui`, `@multica/views` — identical UI to web, with a custom frameless title bar.
+**Goal:** Create `apps/desktop/` Electron app that reuses `@aurion/core`, `@aurion/ui`, `@aurion/views` — identical UI to web, with a custom frameless title bar.
 
 **Architecture:** electron-vite (Vite for main/preload/renderer), react-router-dom `createHashRouter` for routing, platform layer mirrors `apps/web/platform/`. Title bar uses `titleBarStyle: 'hiddenInset'` with a draggable top bar reserved for future tabs.
 
@@ -62,7 +62,7 @@ apps/desktop/
 └── tsconfig.json (three: root, node, web)
 ```
 
-**Modify:** `package.json` (root) — add `"dev:desktop": "turbo dev --filter=@multica/desktop"` to scripts.
+**Modify:** `package.json` (root) — add `"dev:desktop": "turbo dev --filter=@aurion/desktop"` to scripts.
 
 **Verify:** `cd apps/desktop && pnpm install` succeeds.
 
@@ -76,7 +76,7 @@ apps/desktop/
 
 Key requirements:
 - Renderer uses `@vitejs/plugin-react` and `@tailwindcss/vite`
-- Resolve monorepo packages (`@multica/core`, `@multica/ui`, `@multica/views`)
+- Resolve monorepo packages (`@aurion/core`, `@aurion/ui`, `@aurion/views`)
 - Alias `@/` to `src/renderer/src/` for platform layer imports
 
 ```typescript
@@ -113,7 +113,7 @@ export default defineConfig({
 
 ```json
 {
-  "name": "@multica/desktop",
+  "name": "@aurion/desktop",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -126,16 +126,16 @@ export default defineConfig({
     "package": "electron-builder"
   },
   "dependencies": {
-    "@multica/core": "workspace:*",
-    "@multica/ui": "workspace:*",
-    "@multica/views": "workspace:*",
+    "@aurion/core": "workspace:*",
+    "@aurion/ui": "workspace:*",
+    "@aurion/views": "workspace:*",
     "electron-store": "^10.0.0",
     "react-router-dom": "^7.6.0",
     "next-themes": "^0.4.6",
     "sonner": "^2.0.7"
   },
   "devDependencies": {
-    "@multica/tsconfig": "workspace:*",
+    "@aurion/tsconfig": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
@@ -154,8 +154,8 @@ export default defineConfig({
 **File:** `apps/desktop/electron-builder.yml`
 
 ```yaml
-appId: ai.multica.desktop
-productName: Multica
+appId: studio.aurion.desktop
+productName: Aurion
 directories:
   buildResources: build
 files:
@@ -266,7 +266,7 @@ import { contextBridge } from "electron";
 import Store from "electron-store";
 
 const store = new Store<Record<string, string>>({
-  name: "multica-desktop",
+  name: "aurion-desktop",
 });
 
 contextBridge.exposeInMainWorld("electronStore", {
@@ -304,7 +304,7 @@ These files mirror `apps/web/platform/` exactly.
 **File:** `apps/desktop/src/renderer/src/platform/storage.ts`
 
 ```typescript
-import type { StorageAdapter } from "@multica/core/types/storage";
+import type { StorageAdapter } from "@aurion/core/types/storage";
 
 export const desktopStorage: StorageAdapter = {
   getItem: (key) => window.electronStore.get(key),
@@ -320,9 +320,9 @@ export const desktopStorage: StorageAdapter = {
 **File:** `apps/desktop/src/renderer/src/platform/api.ts`
 
 ```typescript
-import { ApiClient } from "@multica/core/api/client";
-import { setApiInstance } from "@multica/core/api";
-import { createLogger } from "@multica/core/logger";
+import { ApiClient } from "@aurion/core/api/client";
+import { setApiInstance } from "@aurion/core/api";
+import { createLogger } from "@aurion/core/logger";
 import { desktopStorage } from "./storage";
 
 // TODO: make configurable via settings
@@ -331,8 +331,8 @@ const API_BASE_URL = "http://localhost:8080";
 export const api = new ApiClient(API_BASE_URL, {
   logger: createLogger("api"),
   onUnauthorized: () => {
-    desktopStorage.removeItem("multica_token");
-    desktopStorage.removeItem("multica_workspace_id");
+    desktopStorage.removeItem("aurion_token");
+    desktopStorage.removeItem("aurion_workspace_id");
     // Navigate to login — handled by auth state change in React tree
   },
 });
@@ -340,9 +340,9 @@ export const api = new ApiClient(API_BASE_URL, {
 setApiInstance(api);
 
 // Hydrate from persisted storage
-const token = desktopStorage.getItem("multica_token");
+const token = desktopStorage.getItem("aurion_token");
 if (token) api.setToken(token);
-const wsId = desktopStorage.getItem("multica_workspace_id");
+const wsId = desktopStorage.getItem("aurion_workspace_id");
 if (wsId) api.setWorkspaceId(wsId);
 ```
 
@@ -353,7 +353,7 @@ if (wsId) api.setWorkspaceId(wsId);
 **File:** `apps/desktop/src/renderer/src/platform/auth.ts`
 
 ```typescript
-import { createAuthStore, registerAuthStore } from "@multica/core/auth";
+import { createAuthStore, registerAuthStore } from "@aurion/core/auth";
 import { api } from "./api";
 import { desktopStorage } from "./storage";
 
@@ -369,7 +369,7 @@ registerAuthStore(useAuthStore);
 **File:** `apps/desktop/src/renderer/src/platform/workspace.ts`
 
 ```typescript
-import { createWorkspaceStore, registerWorkspaceStore } from "@multica/core/workspace";
+import { createWorkspaceStore, registerWorkspaceStore } from "@aurion/core/workspace";
 import { toast } from "sonner";
 import { api } from "./api";
 import { desktopStorage } from "./storage";
@@ -393,7 +393,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   NavigationProvider,
   type NavigationAdapter,
-} from "@multica/views/navigation";
+} from "@aurion/views/navigation";
 
 export function DesktopNavigationProvider({
   children,
@@ -422,7 +422,7 @@ export function DesktopNavigationProvider({
 **File:** `apps/desktop/src/renderer/src/platform/ws-provider.tsx`
 
 ```typescript
-import { WSProvider } from "@multica/core/realtime";
+import { WSProvider } from "@aurion/core/realtime";
 import { useAuthStore } from "./auth";
 import { useWorkspaceStore } from "./workspace";
 import { desktopStorage } from "./storage";
@@ -463,20 +463,20 @@ import { useAuthStore } from "./auth";
 import { useWorkspaceStore } from "./workspace";
 import { api } from "./api";
 import { desktopStorage } from "./storage";
-import { createLogger } from "@multica/core/logger";
+import { createLogger } from "@aurion/core/logger";
 
 const logger = createLogger("auth");
 
 export function AuthInitializer({ children }: { children: ReactNode }) {
   useEffect(() => {
-    const token = desktopStorage.getItem("multica_token");
+    const token = desktopStorage.getItem("aurion_token");
     if (!token) {
       useAuthStore.setState({ isLoading: false });
       return;
     }
 
     api.setToken(token);
-    const wsId = desktopStorage.getItem("multica_workspace_id");
+    const wsId = desktopStorage.getItem("aurion_workspace_id");
 
     const mePromise = api.getMe();
     const wsPromise = api.listWorkspaces();
@@ -490,8 +490,8 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
         logger.error("auth init failed", err);
         api.setToken(null);
         api.setWorkspaceId(null);
-        desktopStorage.removeItem("multica_token");
-        desktopStorage.removeItem("multica_workspace_id");
+        desktopStorage.removeItem("aurion_token");
+        desktopStorage.removeItem("aurion_workspace_id");
         useAuthStore.setState({ user: null, isLoading: false });
       });
   }, []);
@@ -556,15 +556,15 @@ Replicates `apps/web/app/(dashboard)/layout.tsx` structure but with title bar an
 ```typescript
 import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useNavigationStore } from "@multica/core/navigation";
-import { SidebarProvider, SidebarInset } from "@multica/ui/components/ui/sidebar";
-import { WorkspaceIdProvider } from "@multica/core/hooks";
-import { ModalRegistry } from "@multica/views/modals/registry";
+import { useNavigationStore } from "@aurion/core/navigation";
+import { SidebarProvider, SidebarInset } from "@aurion/ui/components/ui/sidebar";
+import { WorkspaceIdProvider } from "@aurion/core/hooks";
+import { ModalRegistry } from "@aurion/views/modals/registry";
 import { useAuthStore } from "@/platform/auth";
 import { useWorkspaceStore } from "@/platform/workspace";
 import { TitleBar } from "./title-bar";
 import { AppSidebar } from "./app-sidebar";
-import { MulticaIcon } from "./multica-icon";
+import { AurionIcon } from "./aurion-icon";
 
 export function DashboardShell() {
   const navigate = useNavigate();
@@ -588,7 +588,7 @@ export function DashboardShell() {
       <div className="flex h-screen flex-col">
         <TitleBar />
         <div className="flex flex-1 items-center justify-center">
-          <MulticaIcon className="size-6" />
+          <AurionIcon className="size-6" />
         </div>
       </div>
     );
@@ -610,7 +610,7 @@ export function DashboardShell() {
               </WorkspaceIdProvider>
             ) : (
               <div className="flex flex-1 items-center justify-center">
-                <MulticaIcon className="size-6 animate-pulse" />
+                <AurionIcon className="size-6 animate-pulse" />
               </div>
             )}
           </SidebarInset>
@@ -627,11 +627,11 @@ export function DashboardShell() {
 
 Copy these from `apps/web/` to `apps/desktop/src/renderer/src/components/`, adjusting imports:
 
-- `multica-icon.tsx` — Copy as-is (pure CSS, no dependencies)
+- `aurion-icon.tsx` — Copy as-is (pure CSS, no dependencies)
 - `app-sidebar.tsx` — Copy from `apps/web/app/(dashboard)/_components/app-sidebar.tsx`, change:
   - `@/platform/auth` → `@/platform/auth` (same alias, different root)
   - `@/platform/workspace` → `@/platform/workspace`
-  - Any `next/link` → `AppLink` from `@multica/views/navigation` (check if already using AppLink)
+  - Any `next/link` → `AppLink` from `@aurion/views/navigation` (check if already using AppLink)
 - `theme-provider.tsx` — Copy, uses `next-themes` which works in Electron too
 
 **Commit:** `feat(desktop): add title bar, dashboard shell, and shared components`
@@ -648,7 +648,7 @@ Copy these from `apps/web/` to `apps/desktop/src/renderer/src/components/`, adju
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@multica/ui/styles/tokens.css";
+@import "@aurion/ui/styles/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -689,14 +689,14 @@ import { createHashRouter, Navigate } from "react-router-dom";
 import { DashboardShell } from "./components/dashboard-shell";
 import { LoginPage } from "./pages/login";
 
-// Extracted pages from @multica/views
-import { IssuesPage } from "@multica/views/issues/components";
-import { IssueDetail } from "@multica/views/issues/components";
-import MyIssuesPage from "@multica/views/my-issues";
-import RuntimesPage from "@multica/views/runtimes";
-import SkillsPage from "@multica/views/skills";
+// Extracted pages from @aurion/views
+import { IssuesPage } from "@aurion/views/issues/components";
+import { IssueDetail } from "@aurion/views/issues/components";
+import MyIssuesPage from "@aurion/views/my-issues";
+import RuntimesPage from "@aurion/views/runtimes";
+import SkillsPage from "@aurion/views/skills";
 
-// Placeholder pages (not yet extracted to @multica/views)
+// Placeholder pages (not yet extracted to @aurion/views)
 import { PlaceholderPage } from "./pages/placeholder";
 
 export const router = createHashRouter([
@@ -729,7 +729,7 @@ export function PlaceholderPage({ title }: { title: string }) {
       <div className="text-center">
         <h1 className="text-2xl font-bold">{title}</h1>
         <p className="mt-2 text-muted-foreground">
-          Coming soon — requires page extraction to @multica/views.
+          Coming soon — requires page extraction to @aurion/views.
         </p>
       </div>
     </div>
@@ -743,7 +743,7 @@ export function PlaceholderPage({ title }: { title: string }) {
 
 ```typescript
 import { useParams } from "react-router-dom";
-import { IssueDetail } from "@multica/views/issues/components";
+import { IssueDetail } from "@aurion/views/issues/components";
 
 export function IssueDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -763,8 +763,8 @@ Check how `IssueDetail` receives the issue ID (via prop or via navigation adapte
 ```typescript
 import { RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
-import { Toaster } from "@multica/ui/components/ui/sonner";
-import { QueryProvider } from "@multica/core/provider";
+import { Toaster } from "@aurion/ui/components/ui/sonner";
+import { QueryProvider } from "@aurion/core/provider";
 import { AuthInitializer } from "./platform/auth-initializer";
 import { DesktopWSProvider } from "./platform/ws-provider";
 import { DesktopNavigationProvider } from "./platform/navigation";
@@ -825,7 +825,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multica</title>
+    <title>Aurion</title>
   </head>
   <body class="h-full overflow-hidden antialiased">
     <div id="root" class="h-full"></div>
@@ -858,11 +858,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/platform/auth";
 import { useWorkspaceStore } from "@/platform/workspace";
 import { api } from "@/platform/api";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@multica/ui/components/ui/card";
-import { Input } from "@multica/ui/components/ui/input";
-import { Button } from "@multica/ui/components/ui/button";
-import { Label } from "@multica/ui/components/ui/label";
-import { MulticaIcon } from "../components/multica-icon";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@aurion/ui/components/ui/card";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Label } from "@aurion/ui/components/ui/label";
+import { AurionIcon } from "../components/aurion-icon";
 import { TitleBar } from "../components/title-bar";
 
 export function LoginPage() {
@@ -908,9 +908,9 @@ export function LoginPage() {
         <Card className="w-[380px]">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
-              <MulticaIcon bordered size="lg" />
+              <AurionIcon bordered size="lg" />
             </div>
-            <CardTitle>Sign in to Multica</CardTitle>
+            <CardTitle>Sign in to Aurion</CardTitle>
             <CardDescription>
               {step === "email"
                 ? "Enter your email to get a login code"
@@ -994,7 +994,7 @@ export function LoginPage() {
 
 ```json
 {
-  "extends": "@multica/tsconfig/base.json",
+  "extends": "@aurion/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "out",
     "types": ["electron-vite/node"]
@@ -1007,7 +1007,7 @@ export function LoginPage() {
 
 ```json
 {
-  "extends": "@multica/tsconfig/react-library.json",
+  "extends": "@aurion/tsconfig/react-library.json",
   "compilerOptions": {
     "outDir": "out",
     "baseUrl": ".",
@@ -1053,13 +1053,13 @@ export function LoginPage() {
 
 These are for future PRs:
 
-1. **Extract fat pages to @multica/views:**
+1. **Extract fat pages to @aurion/views:**
    - `agents/page.tsx` (1279 lines) → `packages/views/agents/`
    - `inbox/page.tsx` (468 lines) → `packages/views/inbox/`
    - `settings/page.tsx` + `_components/` → `packages/views/settings/`
    - `login/page.tsx` → `packages/views/auth/` (with `useNavigation()` instead of `useRouter()`)
 
-2. **App sidebar extraction:** Copy from web or extract shared sidebar to `@multica/views/layout/`
+2. **App sidebar extraction:** Copy from web or extract shared sidebar to `@aurion/views/layout/`
 
 3. **Desktop-specific features:** Tray icon, auto-updater, global shortcuts, daemon management, deep links
 

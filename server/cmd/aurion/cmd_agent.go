@@ -160,22 +160,22 @@ func newAPIClient(cmd *cobra.Command) (*cli.APIClient, error) {
 	token := resolveToken(cmd)
 
 	if serverURL == "" {
-		return nil, fmt.Errorf("server URL not set: use --server-url flag, MULTICA_SERVER_URL env, or 'multica config set server_url <url>'")
+		return nil, fmt.Errorf("server URL not set: use --server-url flag, AURION_SERVER_URL env, or 'aurion config set server_url <url>'")
 	}
 
 	client := cli.NewAPIClient(serverURL, workspaceID, token)
 	// When running inside a daemon task, attribute actions to the agent.
-	if agentID := os.Getenv("MULTICA_AGENT_ID"); agentID != "" {
+	if agentID := os.Getenv("AURION_AGENT_ID"); agentID != "" {
 		client.AgentID = agentID
 	}
-	if taskID := os.Getenv("MULTICA_TASK_ID"); taskID != "" {
+	if taskID := os.Getenv("AURION_TASK_ID"); taskID != "" {
 		client.TaskID = taskID
 	}
 	return client, nil
 }
 
 func resolveServerURL(cmd *cobra.Command) string {
-	val := cli.FlagOrEnv(cmd, "server-url", "MULTICA_SERVER_URL", "")
+	val := cli.FlagOrEnv(cmd, "server-url", "AURION_SERVER_URL", "")
 	if val != "" {
 		return normalizeAPIBaseURL(val)
 	}
@@ -184,7 +184,7 @@ func resolveServerURL(cmd *cobra.Command) string {
 	if err == nil && cfg.ServerURL != "" {
 		return normalizeAPIBaseURL(cfg.ServerURL)
 	}
-	fmt.Fprintln(os.Stderr, "No server configured. Run 'multica setup' first.")
+	fmt.Fprintln(os.Stderr, "No server configured. Run 'aurion setup' first.")
 	os.Exit(1)
 	return "" // unreachable
 }
@@ -198,7 +198,7 @@ func normalizeAPIBaseURL(raw string) string {
 }
 
 func resolveWorkspaceID(cmd *cobra.Command) string {
-	val := cli.FlagOrEnv(cmd, "workspace-id", "MULTICA_WORKSPACE_ID", "")
+	val := cli.FlagOrEnv(cmd, "workspace-id", "AURION_WORKSPACE_ID", "")
 	if val != "" {
 		return val
 	}
@@ -213,7 +213,7 @@ func resolveWorkspaceID(cmd *cobra.Command) string {
 func requireWorkspaceID(cmd *cobra.Command) (string, error) {
 	id := resolveWorkspaceID(cmd)
 	if id == "" {
-		return "", fmt.Errorf("workspace_id is required: use --workspace-id flag, set MULTICA_WORKSPACE_ID env, or run 'multica config set workspace_id <id>'")
+		return "", fmt.Errorf("workspace_id is required: use --workspace-id flag, set AURION_WORKSPACE_ID env, or run 'aurion config set workspace_id <id>'")
 	}
 	return id, nil
 }

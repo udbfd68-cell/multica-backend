@@ -60,8 +60,8 @@ Investigation confirmed `backlog` is the issue status "agent paused" state — o
 
 Run from main checkout:
 ```bash
-git worktree add ../multica-onboarding-removal -b chore/remove-onboarding origin/main
-cd ../multica-onboarding-removal
+git worktree add ../aurion-onboarding-removal -b chore/remove-onboarding origin/main
+cd ../aurion-onboarding-removal
 ```
 
 **Step 2: Verify clean state**
@@ -229,7 +229,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CreateWorkspaceForm } from "./create-workspace-form";
 
 const mockMutate = vi.fn();
-vi.mock("@multica/core/workspace/mutations", () => ({
+vi.mock("@aurion/core/workspace/mutations", () => ({
   useCreateWorkspace: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
@@ -291,7 +291,7 @@ describe("CreateWorkspaceForm", () => {
 **Step 2: Run to verify failure**
 
 ```bash
-pnpm --filter @multica/views exec vitest run workspace/create-workspace-form.test.tsx
+pnpm --filter @aurion/views exec vitest run workspace/create-workspace-form.test.tsx
 ```
 Expected: FAIL — "Cannot find module './create-workspace-form'".
 
@@ -303,12 +303,12 @@ Expected: FAIL — "Cannot find module './create-workspace-form'".
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { Button } from "@multica/ui/components/ui/button";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
-import { useCreateWorkspace } from "@multica/core/workspace/mutations";
-import type { Workspace } from "@multica/core/types";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Label } from "@aurion/ui/components/ui/label";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Card, CardContent } from "@aurion/ui/components/ui/card";
+import { useCreateWorkspace } from "@aurion/core/workspace/mutations";
+import type { Workspace } from "@aurion/core/types";
 import {
   WORKSPACE_SLUG_CONFLICT_ERROR,
   WORKSPACE_SLUG_FORMAT_ERROR,
@@ -387,7 +387,7 @@ export function CreateWorkspaceForm({ onSuccess }: CreateWorkspaceFormProps) {
           <Label htmlFor="ws-slug">Workspace URL</Label>
           <div className="flex items-center gap-0 rounded-md border bg-background focus-within:ring-2 focus-within:ring-ring">
             <span className="pl-3 text-sm text-muted-foreground select-none">
-              multica.ai/
+              aurion.studio/
             </span>
             <Input
               id="ws-slug"
@@ -424,14 +424,14 @@ In `packages/views/modals/create-workspace.tsx`, replace the inline form (curren
 import { useNavigation } from "../navigation";
 import { useImmersiveMode } from "../platform";
 import { ArrowLeft } from "lucide-react";
-import { Button } from "@multica/ui/components/ui/button";
+import { Button } from "@aurion/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
-} from "@multica/ui/components/ui/dialog";
-import { paths } from "@multica/core/paths";
+} from "@aurion/ui/components/ui/dialog";
+import { paths } from "@aurion/core/paths";
 import { CreateWorkspaceForm } from "../workspace/create-workspace-form";
 
 export function CreateWorkspaceModal({ onClose }: { onClose: () => void }) {
@@ -487,8 +487,8 @@ export function CreateWorkspaceModal({ onClose }: { onClose: () => void }) {
 **Step 5: Run tests**
 
 ```bash
-pnpm --filter @multica/views exec vitest run workspace/create-workspace-form.test.tsx
-pnpm --filter @multica/views exec vitest run modals/create-workspace.test.tsx
+pnpm --filter @aurion/views exec vitest run workspace/create-workspace-form.test.tsx
+pnpm --filter @aurion/views exec vitest run modals/create-workspace.test.tsx
 ```
 Both must pass. If `create-workspace.test.tsx` was relying on internal form structure, fix the test to assert behavior through the now-extracted form.
 
@@ -556,8 +556,8 @@ describe("NoAccessPage", () => {
 ```tsx
 "use client";
 
-import { Button } from "@multica/ui/components/ui/button";
-import { paths } from "@multica/core/paths";
+import { Button } from "@aurion/ui/components/ui/button";
+import { paths } from "@aurion/core/paths";
 import { useNavigation } from "../navigation";
 
 export function NoAccessPage() {
@@ -627,7 +627,7 @@ it("reserves new-workspace", () => {
 **Step 2: Run to verify failure**
 
 ```bash
-pnpm --filter @multica/core exec vitest run paths/paths.test.ts paths/reserved-slugs.test.ts
+pnpm --filter @aurion/core exec vitest run paths/paths.test.ts paths/reserved-slugs.test.ts
 ```
 
 **Step 3: Implement**
@@ -770,9 +770,9 @@ Note its auth check pattern + redirect after success.
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useAuthStore } from "@multica/core/auth";
-import { paths } from "@multica/core/paths";
-import { CreateWorkspaceForm } from "@multica/views/workspace/create-workspace-form";
+import { useAuthStore } from "@aurion/core/auth";
+import { paths } from "@aurion/core/paths";
+import { CreateWorkspaceForm } from "@aurion/views/workspace/create-workspace-form";
 
 export default function NewWorkspacePage() {
   const router = useRouter();
@@ -790,7 +790,7 @@ export default function NewWorkspacePage() {
       <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome to Multica
+            Welcome to Aurion
           </h1>
           <p className="mt-2 text-muted-foreground">
             Create your workspace to get started.
@@ -830,7 +830,7 @@ git commit -m "feat(web): add /new-workspace route"
 In `routes.tsx`, add a sibling to `OnboardingRoute` (don't delete OnboardingRoute yet — Phase 6 does that):
 
 ```tsx
-import { CreateWorkspaceForm } from "@multica/views/workspace/create-workspace-form";
+import { CreateWorkspaceForm } from "@aurion/views/workspace/create-workspace-form";
 
 function NewWorkspaceRoute() {
   const nav = useNavigation();
@@ -839,7 +839,7 @@ function NewWorkspaceRoute() {
       <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome to Multica
+            Welcome to Aurion
           </h1>
           <p className="mt-2 text-muted-foreground">
             Create your workspace to get started.
@@ -893,7 +893,7 @@ Note lines 63-69 (the `useEffect` that does `router.replace(paths.root())`) and 
 
 Remove the `useEffect` that calls `router.replace(paths.root())`. Replace the `if (!workspace) return null;` block:
 ```tsx
-import { NoAccessPage } from "@multica/views/workspace/no-access-page";
+import { NoAccessPage } from "@aurion/views/workspace/no-access-page";
 
 // ... earlier code unchanged ...
 
@@ -941,7 +941,7 @@ Remove the `useEffect` that calls `navigate(paths.root())` (lines 56-59). Replac
 
 Add import:
 ```tsx
-import { NoAccessPage } from "@multica/views/workspace/no-access-page";
+import { NoAccessPage } from "@aurion/views/workspace/no-access-page";
 ```
 
 **Step 2: Manual smoke**
@@ -1010,7 +1010,7 @@ git commit -m "refactor: redirect zero-workspace users to /new-workspace instead
 ### Task 5.2: CLI — `cmd_login.go`
 
 **Files:**
-- Modify: `server/cmd/multica/cmd_login.go` (line ~128)
+- Modify: `server/cmd/aurion/cmd_login.go` (line ~128)
 
 **Step 1: Update URL string**
 
@@ -1031,14 +1031,14 @@ fmt.Fprintln(os.Stderr, "\nNo workspaces found. Opening workspace creation in yo
 **Step 2: Run CLI tests**
 
 ```bash
-cd server && go test ./cmd/multica/ -v
+cd server && go test ./cmd/aurion/ -v
 ```
 Update any test that asserted the old URL/log message.
 
 **Step 3: Commit**
 
 ```bash
-git add server/cmd/multica/cmd_login.go
+git add server/cmd/aurion/cmd_login.go
 git commit -m "refactor(cli): point login polling at /new-workspace"
 ```
 
@@ -1057,7 +1057,7 @@ Add a separate `useEffect` that subscribes to React Query workspace list and res
 
 ```tsx
 import { useQuery } from "@tanstack/react-query";
-import { workspaceListOptions } from "@multica/core/workspace/queries";
+import { workspaceListOptions } from "@aurion/core/workspace/queries";
 
 // inside the App component:
 const { data: workspaces } = useQuery({
@@ -1135,7 +1135,7 @@ Also edit **`packages/views/package.json`** — remove the onboarding export:
 "./onboarding": "./onboarding/index.ts",
 ```
 
-Without this, `pnpm typecheck` may still report the export as valid and subsequent imports from `@multica/views/onboarding` won't be caught as broken.
+Without this, `pnpm typecheck` may still report the export as valid and subsequent imports from `@aurion/views/onboarding` won't be caught as broken.
 
 ### Task 6.3: Remove onboarding hooks from desktop-layout
 
@@ -1247,7 +1247,7 @@ Three personas to test for **both web and desktop**:
 
 ```bash
 # Use a dev account with zero workspaces:
-multica login --server-url http://localhost:8080
+aurion login --server-url http://localhost:8080
 # Expect browser to open at /new-workspace
 # Create workspace in browser
 # CLI should detect and continue

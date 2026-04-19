@@ -44,7 +44,7 @@ export const useIssueDraftStore = create<IssueDraftStore>()(
       },
     }),
     {
-      name: "multica_issue_draft",
+      name: "aurion_issue_draft",
       storage: createJSONStorage(() => createWorkspaceAwareStorage(defaultStorage)),
     },
   ),

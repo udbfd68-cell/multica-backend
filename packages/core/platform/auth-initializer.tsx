@@ -59,7 +59,7 @@ export function AuthInitializer({
     }
 
     // Token mode: read from localStorage (Electron / legacy).
-    let token = storage.getItem("multica_token");
+    let token = storage.getItem("aurion_token");
 
     // Auto-login: if no token in storage but one is baked in at build time
     // via NEXT_PUBLIC_AUTO_TOKEN, inject it so the user lands directly in
@@ -68,7 +68,7 @@ export function AuthInitializer({
     const autoToken = process.env.NEXT_PUBLIC_AUTO_TOKEN ?? "";
     if (!token && autoToken) {
       token = autoToken.trim();
-      storage.setItem("multica_token", token);
+      storage.setItem("aurion_token", token);
     }
 
     if (!token) {
@@ -91,7 +91,7 @@ export function AuthInitializer({
         logger.error("auth init failed", err);
         api.setToken(null);
         setCurrentWorkspace(null, null);
-        storage.removeItem("multica_token");
+        storage.removeItem("aurion_token");
         onLogout?.();
         useAuthStore.setState({ user: null, isLoading: false });
       });

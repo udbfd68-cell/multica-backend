@@ -8,13 +8,13 @@ import { pipeline } from "stream/promises";
 import { tmpdir } from "os";
 import { Readable } from "stream";
 
-// Desktop bootstraps its own copy of the `multica` CLI into userData on first
+// Desktop bootstraps its own copy of the `aurion` CLI into userData on first
 // launch, so users never have to brew-install anything. Build-time decoupled:
 // we don't bundle the binary into the .app, we download whatever the upstream
 // release is at first run.
 
 const GITHUB_LATEST_BASE =
-  "https://github.com/multica-ai/multica/releases/latest/download";
+  "https://github.com/aurion-ai/aurion/releases/latest/download";
 
 function platformAssetName(): string {
   const osMap: Record<string, string> = {
@@ -34,11 +34,11 @@ function platformAssetName(): string {
     );
   }
   const ext = process.platform === "win32" ? "zip" : "tar.gz";
-  return `multica_${os}_${arch}.${ext}`;
+  return `aurion_${os}_${arch}.${ext}`;
 }
 
 function binaryName(): string {
-  return process.platform === "win32" ? "multica.exe" : "multica";
+  return process.platform === "win32" ? "aurion.exe" : "aurion";
 }
 
 export function managedCliPath(): string {
@@ -121,7 +121,7 @@ async function installFresh(): Promise<string> {
   const assetName = platformAssetName();
   const url = `${GITHUB_LATEST_BASE}/${assetName}`;
 
-  const workDir = join(tmpdir(), `multica-cli-${Date.now()}`);
+  const workDir = join(tmpdir(), `aurion-cli-${Date.now()}`);
   await mkdir(workDir, { recursive: true });
 
   try {
@@ -162,7 +162,7 @@ async function installFresh(): Promise<string> {
 }
 
 /**
- * Returns the path to a usable `multica` binary. If one is already present at
+ * Returns the path to a usable `aurion` binary. If one is already present at
  * the managed userData location, returns it immediately. Otherwise downloads
  * the latest release asset for the current platform and installs it.
  */

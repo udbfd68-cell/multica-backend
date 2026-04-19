@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { ListTodo } from "lucide-react";
-import type { Agent, AgentTask } from "@multica/core/types";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { api } from "@multica/core/api";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { issueListOptions } from "@multica/core/issues/queries";
+import type { Agent, AgentTask } from "@aurion/core/types";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
+import { api } from "@aurion/core/api";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useWorkspacePaths } from "@aurion/core/paths";
+import { issueListOptions } from "@aurion/core/issues/queries";
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../../../navigation";
 import { taskStatusConfig } from "../../config";

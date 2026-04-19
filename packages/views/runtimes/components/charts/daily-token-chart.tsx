@@ -10,7 +10,7 @@ import {
 import {
   ChartContainer,
   type ChartConfig,
-} from "@multica/ui/components/ui/chart";
+} from "@aurion/ui/components/ui/chart";
 import type { DailyTokenData } from "../../utils";
 import { formatTokens } from "../../utils";
 

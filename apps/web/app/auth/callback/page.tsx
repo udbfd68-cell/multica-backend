@@ -3,18 +3,18 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { workspaceKeys } from "@multica/core/workspace/queries";
-import { paths } from "@multica/core/paths";
-import { api } from "@multica/core/api";
+import { useAuthStore } from "@aurion/core/auth";
+import { workspaceKeys } from "@aurion/core/workspace/queries";
+import { paths } from "@aurion/core/paths";
+import { api } from "@aurion/core/api";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@multica/ui/components/ui/card";
-import { Button } from "@multica/ui/components/ui/button";
+} from "@aurion/ui/components/ui/card";
+import { Button } from "@aurion/ui/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 function CallbackContent() {
@@ -52,7 +52,7 @@ function CallbackContent() {
         .googleLogin(code, redirectUri)
         .then(({ token }) => {
           setDesktopToken(token);
-          window.location.href = `multica://auth/callback?token=${encodeURIComponent(token)}`;
+          window.location.href = `aurion://auth/callback?token=${encodeURIComponent(token)}`;
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Login failed");
@@ -84,9 +84,9 @@ function CallbackContent() {
       <div className="flex min-h-screen items-center justify-center">
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Opening Multica</CardTitle>
+            <CardTitle className="text-2xl">Opening Aurion</CardTitle>
             <CardDescription>
-              You should see a prompt to open the Multica desktop app. If
+              You should see a prompt to open the Aurion desktop app. If
               nothing happens, click the button below.
             </CardDescription>
           </CardHeader>
@@ -94,10 +94,10 @@ function CallbackContent() {
             <Button
               variant="outline"
               onClick={() => {
-                window.location.href = `multica://auth/callback?token=${encodeURIComponent(desktopToken)}`;
+                window.location.href = `aurion://auth/callback?token=${encodeURIComponent(desktopToken)}`;
               }}
             >
-              Open Multica Desktop
+              Open Aurion Desktop
             </Button>
           </CardContent>
         </Card>

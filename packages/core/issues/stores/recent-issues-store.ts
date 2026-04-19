@@ -34,7 +34,7 @@ export const useRecentIssuesStore = create<RecentIssuesState>()(
         }),
     }),
     {
-      name: "multica_recent_issues",
+      name: "aurion_recent_issues",
       storage: createJSONStorage(() =>
         createWorkspaceAwareStorage(defaultStorage),
       ),

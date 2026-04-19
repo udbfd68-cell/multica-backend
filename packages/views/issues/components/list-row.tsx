@@ -3,13 +3,13 @@
 import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../../navigation";
-import type { Issue } from "@multica/core/types";
+import type { Issue } from "@aurion/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { useIssueSelectionStore } from "@multica/core/issues/stores/selection-store";
-import { useWorkspacePaths } from "@multica/core/paths";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useViewStore } from "@multica/core/issues/stores/view-store-context";
-import { projectListOptions } from "@multica/core/projects/queries";
+import { useIssueSelectionStore } from "@aurion/core/issues/stores/selection-store";
+import { useWorkspacePaths } from "@aurion/core/paths";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useViewStore } from "@aurion/core/issues/stores/view-store-context";
+import { projectListOptions } from "@aurion/core/projects/queries";
 import { PriorityIcon } from "./priority-icon";
 import { ProgressRing } from "./progress-ring";
 

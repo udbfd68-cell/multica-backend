@@ -10,7 +10,7 @@ import {
   AlertCircle,
   Download,
 } from "lucide-react";
-import type { Skill, CreateSkillRequest, UpdateSkillRequest } from "@multica/core/types";
+import type { Skill, CreateSkillRequest, UpdateSkillRequest } from "@aurion/core/types";
 import {
   Dialog,
   DialogContent,
@@ -18,24 +18,24 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@multica/ui/components/ui/dialog";
+} from "@aurion/ui/components/ui/dialog";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/ui/tooltip";
-import { Badge } from "@multica/ui/components/ui/badge";
-import { Button } from "@multica/ui/components/ui/button";
-import { Input } from "@multica/ui/components/ui/input";
-import { Label } from "@multica/ui/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@multica/ui/components/ui/tabs";
+} from "@aurion/ui/components/ui/resizable";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@aurion/ui/components/ui/tooltip";
+import { Badge } from "@aurion/ui/components/ui/badge";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Label } from "@aurion/ui/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@aurion/ui/components/ui/tabs";
 import { toast } from "sonner";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { api } from "@multica/core/api";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
+import { api } from "@aurion/core/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { skillListOptions, workspaceKeys } from "@multica/core/workspace/queries";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { skillListOptions, workspaceKeys } from "@aurion/core/workspace/queries";
 
 import { PageHeader } from "../../layout/page-header";
 import { FileTree } from "./file-tree";
@@ -619,7 +619,7 @@ export default function SkillsPage() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_skills_layout",
+    id: "aurion_skills_layout",
   });
 
   useEffect(() => {

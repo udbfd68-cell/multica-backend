@@ -1,15 +1,15 @@
 import { Server, ArrowUpCircle, ChevronDown, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { AgentRuntime, MemberWithUser } from "@multica/core/types";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { memberListOptions } from "@multica/core/workspace/queries";
+import type { AgentRuntime, MemberWithUser } from "@aurion/core/types";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { memberListOptions } from "@aurion/core/workspace/queries";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@multica/ui/components/ui/dropdown-menu";
+} from "@aurion/ui/components/ui/dropdown-menu";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { PageHeader } from "../../layout/page-header";
 import { ProviderLogo } from "./provider-logo";
@@ -210,7 +210,7 @@ export function RuntimeList({
           <p className="mt-1 text-xs text-muted-foreground text-center">
             Run{" "}
             <code className="rounded bg-muted px-1 py-0.5">
-              multica daemon start
+              aurion daemon start
             </code>{" "}
             to register a local runtime.
           </p>

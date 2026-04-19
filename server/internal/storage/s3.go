@@ -93,7 +93,7 @@ func (s *S3Storage) storageClass() types.StorageClass {
 }
 
 // KeyFromURL extracts the S3 object key from a CDN or bucket URL.
-// e.g. "https://multica-static.copilothub.ai/abc123.png" → "abc123.png"
+// e.g. "https://aurion-static.copilothub.ai/abc123.png" → "abc123.png"
 func (s *S3Storage) KeyFromURL(rawURL string) string {
 	if s.endpointURL != "" {
 		prefix := strings.TrimRight(s.endpointURL, "/") + "/" + s.bucket + "/"

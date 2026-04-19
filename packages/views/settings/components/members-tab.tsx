@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Crown, Shield, User, Plus, MoreHorizontal, UserMinus, Users, Clock, X, Mail } from "lucide-react";
 import { ActorAvatar } from "../../common/actor-avatar";
-import type { MemberWithUser, MemberRole, Invitation } from "@multica/core/types";
-import { Input } from "@multica/ui/components/ui/input";
-import { Button } from "@multica/ui/components/ui/button";
-import { Card, CardContent } from "@multica/ui/components/ui/card";
-import { Badge } from "@multica/ui/components/ui/badge";
+import type { MemberWithUser, MemberRole, Invitation } from "@aurion/core/types";
+import { Input } from "@aurion/ui/components/ui/input";
+import { Button } from "@aurion/ui/components/ui/button";
+import { Card, CardContent } from "@aurion/ui/components/ui/card";
+import { Badge } from "@aurion/ui/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -17,14 +17,14 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@multica/ui/components/ui/alert-dialog";
+} from "@aurion/ui/components/ui/alert-dialog";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@multica/ui/components/ui/select";
+} from "@aurion/ui/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -34,14 +34,14 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from "@multica/ui/components/ui/dropdown-menu";
+} from "@aurion/ui/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { useCurrentWorkspace } from "@multica/core/paths";
-import { memberListOptions, invitationListOptions, workspaceKeys } from "@multica/core/workspace/queries";
-import { api } from "@multica/core/api";
+import { useAuthStore } from "@aurion/core/auth";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { useCurrentWorkspace } from "@aurion/core/paths";
+import { memberListOptions, invitationListOptions, workspaceKeys } from "@aurion/core/workspace/queries";
+import { api } from "@aurion/core/api";
 
 const roleConfig: Record<MemberRole, { label: string; icon: typeof Crown; description: string }> = {
   owner: { label: "Owner", icon: Crown, description: "Full access, manage all settings" },

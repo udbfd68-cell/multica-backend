@@ -1,4 +1,4 @@
-import type { Issue, Project } from "@multica/core/types";
+import type { Issue, Project } from "@aurion/core/types";
 
 export function getProjectIssueMetrics(
   project: Pick<Project, "issue_count" | "done_count">,

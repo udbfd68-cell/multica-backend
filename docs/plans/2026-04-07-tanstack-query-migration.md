@@ -1390,13 +1390,13 @@ interface WorkspaceClientState {
 }
 
 export const useWorkspaceClientStore = create<WorkspaceClientState>((set) => ({
-  currentWorkspaceId: localStorage.getItem("multica_workspace_id"),
+  currentWorkspaceId: localStorage.getItem("aurion_workspace_id"),
   setCurrentWorkspaceId: (id) => {
     if (id) {
-      localStorage.setItem("multica_workspace_id", id);
+      localStorage.setItem("aurion_workspace_id", id);
       api.setWorkspaceId(id);
     } else {
-      localStorage.removeItem("multica_workspace_id");
+      localStorage.removeItem("aurion_workspace_id");
       api.setWorkspaceId(null);
     }
     set({ currentWorkspaceId: id });
@@ -1761,7 +1761,7 @@ This plan intentionally structures `core/` to be easily extractable to `packages
 1. **`core/` has zero `react-dom` dependency** — Desktop (Electron renderer) can import it directly.
 2. **`core/` has zero Next.js dependency** — No `next/navigation`, `next/link`, etc.
 3. **`core/` exports only `.ts` files** — No JSX, no components.
-4. **Import alias `@core/*`** — In Phase 6, change tsconfig to point `@multica/core/*` to `packages/core/`, or use package.json workspace imports.
+4. **Import alias `@core/*`** — In Phase 6, change tsconfig to point `@aurion/core/*` to `packages/core/`, or use package.json workspace imports.
 
 The Phase 6 extraction is essentially:
 ```bash

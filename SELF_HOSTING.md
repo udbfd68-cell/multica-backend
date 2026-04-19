@@ -1,6 +1,6 @@
 # Self-Hosting Guide
 
-Deploy Multica on your own infrastructure in minutes.
+Deploy Aurion on your own infrastructure in minutes.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ Deploy Multica on your own infrastructure in minutes.
 | **Frontend** | Web application | Next.js 16 |
 | **Database** | Primary data store | PostgreSQL 17 with pgvector |
 
-Each user who runs AI agents locally also installs the **`multica` CLI** and runs the **agent daemon** on their own machine.
+Each user who runs AI agents locally also installs the **`aurion` CLI** and runs the **agent daemon** on their own machine.
 
 ## Quick Install (Recommended)
 
@@ -18,13 +18,13 @@ Two commands to set up everything — server, CLI, and configuration:
 
 ```bash
 # 1. Install CLI + provision the self-host server
-curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server
+curl -fsSL https://raw.githubusercontent.com/aurion-ai/aurion/main/scripts/install.sh | bash -s -- --with-server
 
 # 2. Configure CLI, authenticate, and start the daemon
-multica setup self-host
+aurion setup self-host
 ```
 
-This clones the repository, starts all services via Docker Compose, installs the `multica` CLI, then configures it for localhost.
+This clones the repository, starts all services via Docker Compose, installs the `aurion` CLI, then configures it for localhost.
 
 Open http://localhost:3000, log in with any email + verification code **`888888`**.
 
@@ -33,7 +33,7 @@ Open http://localhost:3000, log in with any email + verification code **`888888`
 > **CLI only?** If the self-host server is already running and you only need the CLI on a macOS/Linux machine, install it with Homebrew:
 >
 > ```bash
-> brew install multica-ai/tap/multica
+> brew install aurion-ai/tap/aurion
 > ```
 
 ---
@@ -47,8 +47,8 @@ If you prefer to run each step manually:
 **Prerequisites:** Docker and Docker Compose.
 
 ```bash
-git clone https://github.com/multica-ai/multica.git
-cd multica
+git clone https://github.com/aurion-ai/aurion.git
+cd aurion
 make selfhost
 ```
 
@@ -76,7 +76,7 @@ Each team member who wants to run AI agents locally needs to:
 ### a) Install the CLI and an AI agent
 
 ```bash
-brew install multica-ai/tap/multica
+brew install aurion-ai/tap/aurion
 ```
 
 You also need at least one AI agent CLI installed:
@@ -92,7 +92,7 @@ You also need at least one AI agent CLI installed:
 ### b) One-command setup
 
 ```bash
-multica setup self-host
+aurion setup self-host
 ```
 
 This automatically:
@@ -104,13 +104,13 @@ This automatically:
 For on-premise deployments with custom domains:
 
 ```bash
-multica setup self-host --server-url https://api.example.com --app-url https://app.example.com
+aurion setup self-host --server-url https://api.example.com --app-url https://app.example.com
 ```
 
 To verify the daemon is running:
 
 ```bash
-multica daemon status
+aurion daemon status
 ```
 
 > **Alternative:** If you prefer manual steps, see [Manual CLI Configuration](#manual-cli-configuration) below.
@@ -127,7 +127,7 @@ multica daemon status
 If you installed via the install script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --stop
+curl -fsSL https://raw.githubusercontent.com/aurion-ai/aurion/main/scripts/install.sh | bash -s -- --stop
 ```
 
 If you cloned the repo manually:
@@ -137,18 +137,18 @@ If you cloned the repo manually:
 make selfhost-stop
 
 # Stop the local daemon
-multica daemon stop
+aurion daemon stop
 ```
 
-## Switching to Multica Cloud
+## Switching to Aurion Cloud
 
-If you've been self-hosting and want to switch your CLI to [Multica Cloud](https://multica.ai):
+If you've been self-hosting and want to switch your CLI to [Aurion Cloud](https://aurion.studio):
 
 ```bash
-multica setup
+aurion setup
 ```
 
-This reconfigures the CLI for multica.ai, re-authenticates, and restarts the daemon. You will be prompted before overwriting the existing configuration.
+This reconfigures the CLI for aurion.studio, re-authenticates, and restarts the daemon. You will be prompted before overwriting the existing configuration.
 
 > Your local Docker services are unaffected. Stop them separately if you no longer need them.
 
@@ -168,8 +168,8 @@ Migrations run automatically on backend startup.
 If you prefer running Docker Compose steps manually instead of `make selfhost`:
 
 ```bash
-git clone https://github.com/multica-ai/multica.git
-cd multica
+git clone https://github.com/aurion-ai/aurion.git
+cd aurion
 cp .env.example .env
 ```
 
@@ -187,27 +187,27 @@ docker compose -f docker-compose.selfhost.yml up -d
 
 ## Manual CLI Configuration
 
-If you prefer configuring the CLI step by step instead of `multica setup`:
+If you prefer configuring the CLI step by step instead of `aurion setup`:
 
 ```bash
 # Point CLI to your local server
-multica config set server_url http://localhost:8080
-multica config set app_url http://localhost:3000
+aurion config set server_url http://localhost:8080
+aurion config set app_url http://localhost:3000
 
 # Login (opens browser)
-multica login
+aurion login
 
 # Start the daemon
-multica daemon start
+aurion daemon start
 ```
 
 For production deployments with TLS:
 
 ```bash
-multica config set app_url https://app.example.com
-multica config set server_url https://api.example.com
-multica login
-multica daemon start
+aurion config set app_url https://app.example.com
+aurion config set server_url https://api.example.com
+aurion login
+aurion daemon start
 ```
 
 ## Advanced Configuration

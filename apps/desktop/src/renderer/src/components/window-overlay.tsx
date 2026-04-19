@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useImmersiveMode } from "@multica/views/platform";
-import { NewWorkspacePage } from "@multica/views/workspace/new-workspace-page";
-import { InvitePage } from "@multica/views/invite";
-import { useNavigation } from "@multica/views/navigation";
-import { paths } from "@multica/core/paths";
-import { workspaceListOptions } from "@multica/core/workspace/queries";
+import { useImmersiveMode } from "@aurion/views/platform";
+import { NewWorkspacePage } from "@aurion/views/workspace/new-workspace-page";
+import { InvitePage } from "@aurion/views/invite";
+import { useNavigation } from "@aurion/views/navigation";
+import { paths } from "@aurion/core/paths";
+import { workspaceListOptions } from "@aurion/core/workspace/queries";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 
 /**

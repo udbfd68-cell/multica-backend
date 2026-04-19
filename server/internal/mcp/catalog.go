@@ -248,7 +248,7 @@ func Catalog() []BuiltinServer {
 			Slug: "playwright-headed", Name: "Playwright (Headed)", Category: "browser",
 			Description: "Playwright with visible browser — agent opens Chrome, navigates Gmail/Drive/any site using your cookies. ZERO API keys. Persistent profile.",
 			RepoURL: "https://github.com/microsoft/playwright-mcp", Transport: "stdio",
-			Command: "npx -y @playwright/mcp@latest --headless false --user-data-dir ~/.multica/browser-profile", AuthType: "none",
+			Command: "npx -y @playwright/mcp@latest --headless false --user-data-dir ~/.aurion/browser-profile", AuthType: "none",
 			Tags: []string{"browser", "headed", "gmail", "drive", "no-auth", "visual", "real-agent"},
 		},
 		{

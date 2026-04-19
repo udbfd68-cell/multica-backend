@@ -51,7 +51,7 @@ func runWorkspaceList(cmd *cobra.Command, _ []string) error {
 	serverURL := resolveServerURL(cmd)
 	token := resolveToken(cmd)
 	if token == "" {
-		return fmt.Errorf("not authenticated: run 'multica login' first")
+		return fmt.Errorf("not authenticated: run 'aurion login' first")
 	}
 
 	client := cli.NewAPIClient(serverURL, "", token)
@@ -89,7 +89,7 @@ func workspaceIDFromArgs(cmd *cobra.Command, args []string) string {
 func runWorkspaceGet(cmd *cobra.Command, args []string) error {
 	wsID := workspaceIDFromArgs(cmd, args)
 	if wsID == "" {
-		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICA_WORKSPACE_ID")
+		return fmt.Errorf("workspace ID is required: pass as argument or set AURION_WORKSPACE_ID")
 	}
 
 	client, err := newAPIClient(cmd)
@@ -135,7 +135,7 @@ func runWorkspaceGet(cmd *cobra.Command, args []string) error {
 func runWorkspaceMembers(cmd *cobra.Command, args []string) error {
 	wsID := workspaceIDFromArgs(cmd, args)
 	if wsID == "" {
-		return fmt.Errorf("workspace ID is required: pass as argument or set MULTICA_WORKSPACE_ID")
+		return fmt.Errorf("workspace ID is required: pass as argument or set AURION_WORKSPACE_ID")
 	}
 
 	client, err := newAPIClient(cmd)

@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 // The shared Dialog is a Base UI portal that's awkward to test — strip it to
 // simple pass-through wrappers. The typed-confirmation logic lives in the
 // dialog body, not in Base UI, so this doesn't reduce coverage.
-vi.mock("@multica/ui/components/ui/dialog", () => ({
+vi.mock("@aurion/ui/components/ui/dialog", () => ({
   Dialog: ({ children, open }: { children: ReactNode; open: boolean }) =>
     open ? <div>{children}</div> : null,
   DialogContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,

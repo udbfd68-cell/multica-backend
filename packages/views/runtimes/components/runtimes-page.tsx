@@ -8,13 +8,13 @@ import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@multica/ui/components/ui/resizable";
-import { Skeleton } from "@multica/ui/components/ui/skeleton";
-import { useAuthStore } from "@multica/core/auth";
-import { useWorkspaceId } from "@multica/core/hooks";
-import { runtimeListOptions, runtimeKeys } from "@multica/core/runtimes/queries";
-import { useUpdatableRuntimeIds } from "@multica/core/runtimes/hooks";
-import { useWSEvent } from "@multica/core/realtime";
+} from "@aurion/ui/components/ui/resizable";
+import { Skeleton } from "@aurion/ui/components/ui/skeleton";
+import { useAuthStore } from "@aurion/core/auth";
+import { useWorkspaceId } from "@aurion/core/hooks";
+import { runtimeListOptions, runtimeKeys } from "@aurion/core/runtimes/queries";
+import { useUpdatableRuntimeIds } from "@aurion/core/runtimes/hooks";
+import { useWSEvent } from "@aurion/core/realtime";
 import { RuntimeList } from "./runtime-list";
 import { RuntimeDetail } from "./runtime-detail";
 
@@ -37,7 +37,7 @@ export default function RuntimesPage({ topSlot }: RuntimesPageProps = {}) {
   const { data: runtimes = [], isLoading: fetching } = useQuery(runtimeListOptions(wsId, ownerParam));
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_runtimes_layout",
+    id: "aurion_runtimes_layout",
   });
 
   // Re-fetch on daemon register/deregister events.

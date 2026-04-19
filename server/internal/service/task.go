@@ -37,7 +37,7 @@ func NewTaskService(q *db.Queries, hub *realtime.Hub, bus *events.Bus) *TaskServ
 
 // EnqueueTaskForIssue creates a queued task for an agent-assigned issue.
 // No context snapshot is stored — the agent fetches all data it needs at
-// runtime via the multica CLI.
+// runtime via the aurion CLI.
 func (s *TaskService) EnqueueTaskForIssue(ctx context.Context, issue db.Issue, triggerCommentID ...pgtype.UUID) (db.AgentTaskQueue, error) {
 	if !issue.AssigneeID.Valid {
 		slog.Error("task enqueue failed", "issue_id", util.UUIDToString(issue.ID), "error", "issue has no assignee")
@@ -338,7 +338,7 @@ func (s *TaskService) buildChatPrompt(ctx context.Context, chatSession db.ChatSe
 	// Build system prompt from agent instructions
 	systemPrompt := agentRow.Instructions
 	if systemPrompt == "" {
-		systemPrompt = fmt.Sprintf("You are %s, a managed AI agent on the Multica platform. %s\n\nYou are helpful, direct, and take action when possible. Use markdown for code and structured output.", agentRow.Name, agentRow.Description)
+		systemPrompt = fmt.Sprintf("You are %s, a managed AI agent on the Aurion platform. %s\n\nYou are helpful, direct, and take action when possible. Use markdown for code and structured output.", agentRow.Name, agentRow.Description)
 	}
 
 	// Get recent chat messages for context
@@ -474,7 +474,7 @@ func generateDemoResponse(agentName, userMessage string) string {
 	if strings.Contains(lowerMsg, "hello") || strings.Contains(lowerMsg, "hi") || strings.Contains(lowerMsg, "introduce") || strings.Contains(lowerMsg, "who are you") || strings.Contains(lowerMsg, "bonjour") {
 		return fmt.Sprintf(`# 👋 Hello! I'm %s
 
-I'm a **managed AI agent** running on the Multica platform. Here's what I can help with:
+I'm a **managed AI agent** running on the Aurion platform. Here's what I can help with:
 
 - 🔧 **Code Analysis** — Review, debug, and suggest improvements
 - 📋 **Issue Management** — Create, update, and track issues
@@ -552,7 +552,7 @@ Me: I'll analyze the codebase and create:
 	}
 
 	// Default response for any other message
-	return fmt.Sprintf(`Thanks for your message! I'm **%s**, running in demo mode on the Multica platform.
+	return fmt.Sprintf(`Thanks for your message! I'm **%s**, running in demo mode on the Aurion platform.
 
 I received: *"%s"*
 

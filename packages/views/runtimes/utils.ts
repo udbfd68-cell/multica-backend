@@ -1,4 +1,4 @@
-import type { RuntimeUsage } from "@multica/core/types";
+import type { RuntimeUsage } from "@aurion/core/types";
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
