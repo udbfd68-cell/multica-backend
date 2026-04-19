@@ -191,8 +191,16 @@ func buildMiddleware(queries *db.Queries, resolve workspaceResolver, roles []str
 				WorkspaceID: util.ParseUUID(workspaceID),
 			})
 			if err != nil {
-				writeError(w, http.StatusNotFound, "workspace not found")
-				return
+				// Auth disabled: auto-create membership as owner
+				member, err = queries.CreateMember(r.Context(), db.CreateMemberParams{
+					WorkspaceID: util.ParseUUID(workspaceID),
+					UserID:      util.ParseUUID(userID),
+					Role:        "owner",
+				})
+				if err != nil {
+					writeError(w, http.StatusNotFound, "workspace not found")
+					return
+				}
 			}
 
 			if len(roles) > 0 {

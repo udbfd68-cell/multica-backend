@@ -14,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/multica-ai/multica/server/internal/auth"
+	"github.com/multica-ai/multica/server/internal/middleware"
 )
 
 // MembershipChecker verifies a user belongs to a workspace.
@@ -372,20 +373,8 @@ func HandleWebSocket(hub *Hub, mc MembershipChecker, pr PATResolver, resolveSlug
 		return
 	}
 
-	// Try cookie auth first (web clients).
-	var userID string
-	if cookie, err := r.Cookie(auth.AuthCookieName); err == nil && cookie.Value != "" {
-		uid, errMsg := authenticateToken(cookie.Value, pr, r.Context())
-		if errMsg != "" {
-			http.Error(w, errMsg, http.StatusUnauthorized)
-			return
-		}
-		if !mc.IsMember(r.Context(), uid, workspaceID) {
-			http.Error(w, `{"error":"not a member of this workspace"}`, http.StatusForbidden)
-			return
-		}
-		userID = uid
-	}
+	// Auth disabled: use default user for all WebSocket connections.
+	userID := middleware.DefaultUserID
 
 	// Upgrade the connection. Clients without cookies (desktop) will authenticate
 	// via the first WebSocket message, so we must upgrade before we have a token.
@@ -395,29 +384,7 @@ func HandleWebSocket(hub *Hub, mc MembershipChecker, pr PATResolver, resolveSlug
 		return
 	}
 
-	// First-message auth for non-cookie clients (desktop, CLI).
-	if userID == "" {
-		tokenStr, errMsg := firstMessageAuth(conn)
-		if errMsg != "" {
-			conn.WriteMessage(websocket.TextMessage, []byte(errMsg))
-			conn.Close()
-			return
-		}
-		uid, errMsg := authenticateToken(tokenStr, pr, r.Context())
-		if errMsg != "" {
-			conn.WriteMessage(websocket.TextMessage, []byte(errMsg))
-			conn.Close()
-			return
-		}
-		if !mc.IsMember(r.Context(), uid, workspaceID) {
-			conn.WriteMessage(websocket.TextMessage, []byte(`{"error":"not a member of this workspace"}`))
-			conn.Close()
-			return
-		}
-		userID = uid
-
-		conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"auth_ack"}`))
-	}
+	// Auth disabled: no first-message auth needed.
 
 	client := &Client{
 		hub:         hub,

@@ -67,6 +67,9 @@ func main() {
 	registerActivityListeners(bus, queries)
 	registerNotificationListeners(bus, queries)
 
+	// Create default user/workspace when auth is disabled
+	EnsureDefaultUser(ctx, pool)
+
 	r := NewRouter(pool, hub, bus)
 
 	srv := &http.Server{

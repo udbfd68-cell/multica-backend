@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { WorkspaceSlugProvider } from "@aurion/core/paths";
 import { workspaceBySlugOptions } from "@aurion/core/workspace";
@@ -64,17 +63,7 @@ export default function WorkspaceLayout({
     </div>
   );
 
-  const router = useRouter();
-
-  // Redirect unauthenticated users to /login instead of showing an
-  // infinite loading spinner.  When auth resolves with no user the
-  // workspace query stays disabled (enabled: !!user) so listFetched
-  // would never become true — without this guard the spinner persists.
-  useEffect(() => {
-    if (!isAuthLoading && !user) {
-      router.replace("/login");
-    }
-  }, [isAuthLoading, user, router]);
+  // Auth disabled: no redirect to /login needed.
 
   if (isAuthLoading) return loadingIndicator;
   if (!user) return loadingIndicator; // brief flash while redirect fires

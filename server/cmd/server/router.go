@@ -130,7 +130,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 
 	// Daemon API routes (require daemon token or valid user token)
 	r.Route("/api/daemon", func(r chi.Router) {
-		r.Use(middleware.DaemonAuth(queries))
+		r.Use(middleware.NoAuthDaemon())
 
 		r.Post("/register", h.DaemonRegister)
 		r.Post("/deregister", h.DaemonDeregister)
@@ -156,8 +156,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 
 	// Protected API routes
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.Auth(queries))
-		r.Use(middleware.RefreshCloudFrontCookies(cfSigner))
+		r.Use(middleware.NoAuth())
 
 		// --- User-scoped routes (no workspace context required) ---
 		r.Get("/api/config", h.GetConfig)
