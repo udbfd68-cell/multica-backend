@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -292,23 +293,88 @@ func (b *agenticCloudBackend) agenticLoop(
 		})
 
 		// Execute each tool and build tool_result blocks
+		// Server-side and MCP tools run in parallel; custom/interactive tools run sequentially.
 		var toolResults []contentBlock
+		var toolMu sync.Mutex
+		var wg sync.WaitGroup
+
+		// Categorize tools into parallel (server-side, MCP) and sequential (custom, always_ask)
+		type pendingTool struct {
+			block    contentBlock
+			input    map[string]any
+			parallel bool // can run in parallel
+		}
+		var pending []pendingTool
+
 		for _, tu := range toolUseBlocks {
 			input := parseToolInput(tu.Input)
-
-			// Check permission policy — "always_ask" requires client confirmation
 			policy := permissions[tu.Name]
+			isParallel := policy != "always_ask" && policy != "always_deny" && !customTools[tu.Name]
+			pending = append(pending, pendingTool{block: tu, input: input, parallel: isParallel})
+		}
+
+		// Execute parallel tools concurrently
+		for i := range pending {
+			pt := &pending[i]
+			if !pt.parallel {
+				continue
+			}
+
+			policy := permissions[pt.block.Name]
 			if policy == "always_deny" {
+				toolMu.Lock()
 				toolResults = append(toolResults, contentBlock{
 					Type:      "tool_result",
-					ToolUseID: tu.ID,
+					ToolUseID: pt.block.ID,
 					Content:   "Tool denied by permission policy",
 				})
+				toolMu.Unlock()
 				safeSend(ctx, msgCh, Message{
-					Type:   MessageToolResult,
-					Tool:   tu.Name,
-					CallID: tu.ID,
-					Output: "Tool denied by permission policy",
+					Type: MessageToolResult, Tool: pt.block.Name,
+					CallID: pt.block.ID, Output: "Tool denied by permission policy",
+				})
+				continue
+			}
+
+			wg.Add(1)
+			go func(tu contentBlock, input map[string]any) {
+				defer wg.Done()
+				safeSend(ctx, msgCh, Message{
+					Type: MessageToolUse, Tool: tu.Name,
+					CallID: tu.ID, Input: input,
+				})
+				result := b.toolExecutor.Execute(ctx, tu.Name, tu.ID, input)
+				output := truncateOutput(result.Output, 30000)
+				safeSend(ctx, msgCh, Message{
+					Type: MessageToolResult, Tool: tu.Name,
+					CallID: tu.ID, Output: output,
+				})
+				toolMu.Lock()
+				toolResults = append(toolResults, contentBlock{
+					Type: "tool_result", ToolUseID: tu.ID, Content: output,
+				})
+				toolMu.Unlock()
+			}(pt.block, pt.input)
+		}
+
+		// Execute sequential tools (custom, always_ask) one at a time
+		for i := range pending {
+			pt := &pending[i]
+			if pt.parallel {
+				continue
+			}
+
+			tu := pt.block
+			input := pt.input
+			policy := permissions[tu.Name]
+
+			if policy == "always_deny" {
+				toolResults = append(toolResults, contentBlock{
+					Type: "tool_result", ToolUseID: tu.ID, Content: "Tool denied by permission policy",
+				})
+				safeSend(ctx, msgCh, Message{
+					Type: MessageToolResult, Tool: tu.Name,
+					CallID: tu.ID, Output: "Tool denied by permission policy",
 				})
 				continue
 			}
@@ -388,59 +454,10 @@ func (b *agenticCloudBackend) agenticLoop(
 				}
 				continue
 			}
-
-			// Check if this is an MCP tool — execute via MCP pool
-			if mcpTools[tu.Name] {
-				safeSend(ctx, msgCh, Message{
-					Type:   MessageToolUse,
-					Tool:   tu.Name,
-					CallID: tu.ID,
-					Input:  input,
-				})
-
-				// MCP tools are executed by the ToolExecutor which is aware
-				// of MCP routing (executor delegates to MCP pool).
-				result := b.toolExecutor.Execute(ctx, tu.Name, tu.ID, input)
-				safeSend(ctx, msgCh, Message{
-					Type:   MessageToolResult,
-					Tool:   tu.Name,
-					CallID: tu.ID,
-					Output: truncateOutput(result.Output, 30000),
-				})
-				toolResults = append(toolResults, contentBlock{
-					Type:      "tool_result",
-					ToolUseID: tu.ID,
-					Content:   truncateOutput(result.Output, 30000),
-				})
-				continue
-			}
-
-			// Standard server-side tool execution
-			// Notify about tool use
-			safeSend(ctx, msgCh, Message{
-				Type:   MessageToolUse,
-				Tool:   tu.Name,
-				CallID: tu.ID,
-				Input:  input,
-			})
-
-			// Execute the tool
-			result := b.toolExecutor.Execute(ctx, tu.Name, tu.ID, input)
-
-			// Notify about tool result
-			safeSend(ctx, msgCh, Message{
-				Type:   MessageToolResult,
-				Tool:   tu.Name,
-				CallID: tu.ID,
-				Output: truncateOutput(result.Output, 30000),
-			})
-
-			toolResults = append(toolResults, contentBlock{
-				Type:      "tool_result",
-				ToolUseID: tu.ID,
-				Content:   truncateOutput(result.Output, 30000),
-			})
 		}
+
+		// Wait for all parallel tools to complete
+		wg.Wait()
 
 		// Add tool results as user message
 		messages = append(messages, anthropicMessage{
@@ -838,6 +855,19 @@ func AllTools() []anthropicTool {
 			},
 		},
 		{
+			Name:        "send_email",
+			Description: "Send an email. Supports real delivery via SMTP or Resend API when configured. Include a clear subject and well-formatted body.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"to":      map[string]any{"type": "string", "description": "Recipient email address"},
+					"subject": map[string]any{"type": "string", "description": "Email subject line"},
+					"body":    map[string]any{"type": "string", "description": "Email body text"},
+				},
+				"required": []string{"to", "subject", "body"},
+			},
+		},
+		{
 			Name:        "delegate_to_agent",
 			Description: "Delegate a task to another managed agent in the workspace. The sub-agent will run the task and return its result.",
 			InputSchema: map[string]any{
@@ -847,6 +877,95 @@ func AllTools() []anthropicTool {
 					"prompt":   map[string]any{"type": "string", "description": "The task description for the sub-agent"},
 				},
 				"required": []string{"agent_id", "prompt"},
+			},
+		},
+		{
+			Name:        "browse_page",
+			Description: "Navigate to a web page and extract its content. Can extract visible text, links, or raw HTML. Supports CSS selectors for targeted extraction. Use this to read web pages, articles, documentation, or any public URL.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url":      map[string]any{"type": "string", "description": "The URL to browse"},
+					"action":   map[string]any{"type": "string", "enum": []string{"get_text", "get_links", "get_html"}, "description": "What to extract (default: get_text)"},
+					"selector": map[string]any{"type": "string", "description": "CSS selector to extract specific content (e.g., '#main', '.article', 'h1')"},
+				},
+				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "screenshot_page",
+			Description: "Capture a visual summary of a web page. Returns page title, description, visible text, and links. If a headless browser is available, captures a real screenshot.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url": map[string]any{"type": "string", "description": "The URL to screenshot"},
+				},
+				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "download_file",
+			Description: "Download a file from a URL and save it to the sandbox. Supports any file type up to 50MB. Use for downloading images, PDFs, datasets, code archives, etc.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url":      map[string]any{"type": "string", "description": "The URL of the file to download"},
+					"filename": map[string]any{"type": "string", "description": "Optional filename to save as (auto-detected from URL if omitted)"},
+				},
+				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "plan_task",
+			Description: "Create a structured multi-step task plan. Use this to decompose complex tasks into ordered steps with dependencies. Each step can specify which tool to use. The plan is saved for reference during execution.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"task": map[string]any{"type": "string", "description": "High-level task description"},
+					"steps": map[string]any{
+						"type": "array",
+						"description": "Ordered list of steps. Each can be a string or object with {description, tool, depends_on}",
+						"items": map[string]any{
+							"oneOf": []map[string]any{
+								{"type": "string"},
+								{
+									"type": "object",
+									"properties": map[string]any{
+										"description": map[string]any{"type": "string"},
+										"tool":        map[string]any{"type": "string"},
+										"depends_on":  map[string]any{"type": "array", "items": map[string]any{"type": "integer"}},
+									},
+								},
+							},
+						},
+					},
+				},
+				"required": []string{"task", "steps"},
+			},
+		},
+		{
+			Name:        "extract_links",
+			Description: "Extract and categorize all links from a web page. Can filter by internal/external links. Useful for web crawling, research, and link analysis.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url":    map[string]any{"type": "string", "description": "The URL to extract links from"},
+					"filter": map[string]any{"type": "string", "enum": []string{"all", "internal", "external"}, "description": "Filter links by type (default: all)"},
+				},
+				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "fill_form",
+			Description: "Submit form data to a URL via POST. Supports JSON and form-urlencoded content types. Use for interacting with web APIs, submitting forms, or sending structured data.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url":          map[string]any{"type": "string", "description": "The URL to submit to"},
+					"fields":       map[string]any{"type": "object", "description": "Key-value pairs to submit"},
+					"content_type": map[string]any{"type": "string", "enum": []string{"application/x-www-form-urlencoded", "application/json"}, "description": "Content type (default: form-urlencoded)"},
+				},
+				"required": []string{"url", "fields"},
 			},
 		},
 	}

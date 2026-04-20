@@ -1,5 +1,7 @@
 package mcp
 
+import "os"
+
 // BuiltinServer defines a pre-configured MCP server entry for the registry catalog.
 type BuiltinServer struct {
 	Slug        string   `json:"slug"`
@@ -19,6 +21,37 @@ type EnvVar struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Required    bool   `json:"required"`
+}
+
+// AutoDiscoverServers returns the subset of catalog servers that can be
+// auto-enabled based on environment variables that are already set.
+// This allows agents to automatically use MCP servers when API keys are available.
+func AutoDiscoverServers() []BuiltinServer {
+	catalog := Catalog()
+	var available []BuiltinServer
+
+	for _, srv := range catalog {
+		if srv.AuthType == "none" {
+			// No auth needed — always available
+			available = append(available, srv)
+			continue
+		}
+
+		if srv.AuthType == "env_var" && len(srv.EnvVars) > 0 {
+			allSet := true
+			for _, ev := range srv.EnvVars {
+				if ev.Required && os.Getenv(ev.Name) == "" {
+					allSet = false
+					break
+				}
+			}
+			if allSet {
+				available = append(available, srv)
+			}
+		}
+	}
+
+	return available
 }
 
 // Catalog returns the full list of built-in MCP servers.

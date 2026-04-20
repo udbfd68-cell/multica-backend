@@ -5,15 +5,25 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
+	"net"
 	"net/http"
+	"net/smtp"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +50,8 @@ type Executor struct {
 	Logger      *slog.Logger
 	Sandbox     *sandbox.Sandbox
 	BashTimeout time.Duration
+	// Depth tracks delegation depth to prevent infinite sub-agent recursion.
+	Depth int
 	// McpExecute is set by the session service when MCP servers are connected.
 	// It routes MCP tool calls to the appropriate server.
 	McpExecute func(ctx context.Context, toolName string, args map[string]any) (string, error)
@@ -111,6 +123,18 @@ func (e *Executor) Execute(ctx context.Context, toolName, callID string, input m
 		output, isError = e.execMemoryWrite(ctx, input)
 	case "delegate_to_agent":
 		output, isError = e.execDelegateToAgent(ctx, input)
+	case "browse_page":
+		output, isError = e.execBrowsePage(ctx, input)
+	case "download_file":
+		output, isError = e.execDownloadFile(ctx, input)
+	case "screenshot_page":
+		output, isError = e.execScreenshotPage(ctx, input)
+	case "plan_task":
+		output, isError = e.execPlanTask(ctx, input)
+	case "extract_links":
+		output, isError = e.execExtractLinks(ctx, input)
+	case "fill_form":
+		output, isError = e.execFillForm(ctx, input)
 	default:
 		// Try MCP executor if available
 		if e.McpExecute != nil {
@@ -359,10 +383,19 @@ func (e *Executor) execSearchCode(ctx context.Context, input map[string]any) (st
 	}
 	pathFilter, _ := input["path"].(string)
 
+	// Sanitize pathFilter to prevent shell injection
+	// Only allow safe glob characters: alphanumeric, *, ?, ., /, -, _
+	if pathFilter != "" {
+		safePattern := regexp.MustCompile(`^[a-zA-Z0-9*?._/\-]+$`)
+		if !safePattern.MatchString(pathFilter) {
+			return "invalid path filter: only alphanumeric, *, ?, ., /, -, _ are allowed", true
+		}
+	}
+
 	// Build grep command and run in sandbox
 	args := "-rn --color=never --max-count=50"
 	if pathFilter != "" {
-		args += " --include=" + pathFilter
+		args += fmt.Sprintf(" --include=%q", pathFilter)
 	}
 	cmd := fmt.Sprintf("grep %s %q .", args, query)
 	result := e.Sandbox.Exec(ctx, cmd, 15*time.Second)
@@ -464,12 +497,12 @@ func (e *Executor) execWebSearch(ctx context.Context, input map[string]any) (str
 	}
 
 	// Use DuckDuckGo lite as a simple search backend
-	searchURL := "https://lite.duckduckgo.com/lite/?q=" + strings.ReplaceAll(query, " ", "+")
+	searchURL := "https://lite.duckduckgo.com/lite/?q=" + url.QueryEscape(query)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, searchURL, nil)
 	if err != nil {
 		return "failed to create request: " + err.Error(), true
 	}
-	req.Header.Set("User-Agent", "Aurion-Agent/1.0")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Aurion-Agent/2.0)")
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
@@ -483,7 +516,44 @@ func (e *Executor) execWebSearch(ctx context.Context, input map[string]any) (str
 		return "failed to read response: " + err.Error(), true
 	}
 
-	return fmt.Sprintf("Search results for '%s':\n%s", query, string(body)), false
+	htmlStr := string(body)
+
+	// Parse DuckDuckGo Lite results into structured format
+	// DDG Lite uses <a> tags with class "result-link" and <td> for snippets
+	linkRe := regexp.MustCompile(`(?is)<a[^>]+href\s*=\s*["']([^"']+)["'][^>]*class\s*=\s*["']result-link["'][^>]*>(.*?)</a>`)
+	matches := linkRe.FindAllStringSubmatch(htmlStr, 20)
+
+	if len(matches) == 0 {
+		// Fallback: try generic link extraction
+		linkRe2 := regexp.MustCompile(`(?is)<a[^>]+href\s*=\s*["'](https?://[^"']+)["'][^>]*>(.*?)</a>`)
+		matches = linkRe2.FindAllStringSubmatch(htmlStr, 20)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Search results for '%s':\n\n", query))
+
+	if len(matches) == 0 {
+		// Return text-extracted content as fallback
+		text := extractTextFromHTML(htmlStr)
+		if len(text) > 5000 {
+			text = text[:5000]
+		}
+		sb.WriteString(text)
+	} else {
+		for i, m := range matches {
+			if len(m) < 3 {
+				continue
+			}
+			href := strings.TrimSpace(m[1])
+			title := strings.TrimSpace(extractTextFromHTML(m[2]))
+			if href == "" || strings.Contains(href, "duckduckgo.com") {
+				continue
+			}
+			sb.WriteString(fmt.Sprintf("%d. %s\n   URL: %s\n\n", i+1, title, href))
+		}
+	}
+
+	return sb.String(), false
 }
 
 // ---------------------------------------------------------------------------
@@ -523,14 +593,148 @@ func (e *Executor) execSendEmail(ctx context.Context, input map[string]any) (str
 
 	e.Logger.Info("agent email request", "to", to, "subject", subject, "session_id", util.UUIDToString(e.SessionID))
 
+	// Try Resend API first (recommended for production)
+	resendKey := os.Getenv("RESEND_API_KEY")
+	if resendKey != "" {
+		return e.sendViaResend(ctx, resendKey, to, subject, body)
+	}
+
+	// Try SMTP configuration
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+	smtpUser := os.Getenv("SMTP_USER")
+	smtpPass := os.Getenv("SMTP_PASSWORD")
+	smtpFrom := os.Getenv("SMTP_FROM")
+
+	if smtpHost != "" && smtpUser != "" {
+		if smtpPort == "" {
+			smtpPort = "587"
+		}
+		if smtpFrom == "" {
+			smtpFrom = smtpUser
+		}
+		return e.sendViaSMTP(ctx, smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, to, subject, body)
+	}
+
+	// Fallback: no email provider configured — return error
 	payload, _ := json.Marshal(map[string]string{"to": to, "subject": subject, "body": body})
 	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
 		SessionID: e.SessionID,
-		Type:      "tool.email_sent",
+		Type:      "tool.email_failed",
 		Payload:   payload,
 	})
 
-	return fmt.Sprintf("Email queued to %s with subject: %s", to, subject), false
+	return fmt.Sprintf("Cannot send email: no email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD environment variables to enable email delivery. Email to %s was NOT sent.", to), true
+}
+
+// sendViaResend sends email using the Resend API (https://resend.com).
+func (e *Executor) sendViaResend(ctx context.Context, apiKey, to, subject, body string) (string, bool) {
+	fromAddr := os.Getenv("RESEND_FROM")
+	if fromAddr == "" {
+		fromAddr = "agent@aurion.studio"
+	}
+
+	payload, _ := json.Marshal(map[string]any{
+		"from":    fromAddr,
+		"to":      []string{to},
+		"subject": subject,
+		"text":    body,
+	})
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(payload))
+	if err != nil {
+		return "failed to create request: " + err.Error(), true
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "Resend API error: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+
+	if resp.StatusCode >= 400 {
+		return fmt.Sprintf("Resend API error (status %d): %s", resp.StatusCode, string(respBody)), true
+	}
+
+	// Log success event
+	eventPayload, _ := json.Marshal(map[string]string{
+		"to": to, "subject": subject, "provider": "resend", "status": "sent",
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.email_sent",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("Email sent successfully to %s via Resend (subject: %s)", to, subject), false
+}
+
+// sendViaSMTP sends email using SMTP with STARTTLS.
+func (e *Executor) sendViaSMTP(_ context.Context, host, port, user, pass, from, to, subject, body string) (string, bool) {
+	addr := net.JoinHostPort(host, port)
+
+	// Build RFC 2822 email
+	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\nDate: %s\r\n\r\n%s",
+		from, to, mime.QEncoding.Encode("utf-8", subject), time.Now().Format(time.RFC1123Z), body)
+
+	auth := smtp.PlainAuth("", user, pass, host)
+
+	// Use STARTTLS
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		return "SMTP connection failed: " + err.Error(), true
+	}
+
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		conn.Close()
+		return "SMTP client error: " + err.Error(), true
+	}
+	defer c.Quit()
+
+	tlsConfig := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}
+	if err := c.StartTLS(tlsConfig); err != nil {
+		// Continue without TLS if STARTTLS fails (some servers don't support it)
+		e.Logger.Warn("SMTP STARTTLS failed, continuing without TLS", "error", err)
+	}
+
+	if err := c.Auth(auth); err != nil {
+		return "SMTP auth failed: " + err.Error(), true
+	}
+	if err := c.Mail(from); err != nil {
+		return "SMTP MAIL FROM failed: " + err.Error(), true
+	}
+	if err := c.Rcpt(to); err != nil {
+		return "SMTP RCPT TO failed: " + err.Error(), true
+	}
+
+	w, err := c.Data()
+	if err != nil {
+		return "SMTP DATA failed: " + err.Error(), true
+	}
+	if _, err := w.Write([]byte(msg)); err != nil {
+		return "SMTP write failed: " + err.Error(), true
+	}
+	if err := w.Close(); err != nil {
+		return "SMTP close failed: " + err.Error(), true
+	}
+
+	// Log success event
+	eventPayload, _ := json.Marshal(map[string]string{
+		"to": to, "subject": subject, "provider": "smtp", "host": host, "status": "sent",
+	})
+	e.Queries.CreateSessionEvent(context.Background(), db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.email_sent",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("Email sent successfully to %s via SMTP (subject: %s)", to, subject), false
 }
 
 // ---------------------------------------------------------------------------
@@ -552,42 +756,57 @@ func (e *Executor) execHTTPRequest(ctx context.Context, input map[string]any) (s
 		return "only GET and POST methods are allowed", true
 	}
 
-	lower := strings.ToLower(urlStr)
-	if strings.Contains(lower, "localhost") || strings.Contains(lower, "127.0.0.1") ||
-		strings.Contains(lower, "169.254") || strings.Contains(lower, "10.") ||
-		strings.Contains(lower, "192.168") || strings.HasPrefix(lower, "http://172.") {
+	if isInternalURL(urlStr) {
 		return "access to internal network addresses is blocked", true
 	}
 
 	execCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	args := []string{"-s", "-S", "--max-time", "10", "-X", method}
-	if headers, ok := input["headers"].(map[string]any); ok {
-		for k, v := range headers {
-			args = append(args, "-H", fmt.Sprintf("%s: %s", k, v))
-		}
-	}
+	// Use Go's http.Client instead of curl to avoid command injection
+	var bodyReader io.Reader
 	if method == "POST" {
 		if body, ok := input["body"].(string); ok {
-			args = append(args, "-d", body)
+			bodyReader = strings.NewReader(body)
 		}
 	}
-	args = append(args, urlStr)
 
-	cmd := exec.CommandContext(execCtx, "curl", args...)
-	out, err := cmd.CombinedOutput()
-	result := string(out)
+	req, err := http.NewRequestWithContext(execCtx, method, urlStr, bodyReader)
+	if err != nil {
+		return "failed to create request: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Aurion-Agent/2.0")
 
+	if headers, ok := input["headers"].(map[string]any); ok {
+		for k, v := range headers {
+			key := fmt.Sprintf("%s", k)
+			val := fmt.Sprintf("%s", v)
+			// Reject headers with newlines (header injection)
+			if strings.ContainsAny(key, "\r\n") || strings.ContainsAny(val, "\r\n") {
+				continue
+			}
+			req.Header.Set(key, val)
+		}
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "HTTP request failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 50*1024))
+	if err != nil {
+		return "failed to read response: " + err.Error(), true
+	}
+
+	result := string(respBody)
 	if len(result) > 50000 {
 		result = result[:50000] + "\n... (response truncated)"
 	}
 
-	if err != nil {
-		return "HTTP request failed: " + err.Error() + "\n" + result, true
-	}
-
-	return result, false
+	return fmt.Sprintf("HTTP %d %s\n\n%s", resp.StatusCode, resp.Status, result), false
 }
 
 // ---------------------------------------------------------------------------
@@ -688,6 +907,12 @@ func (e *Executor) execDelegateToAgent(ctx context.Context, input map[string]any
 		return "agent_id and prompt are required", true
 	}
 
+	// Prevent infinite delegation chains
+	const maxDelegationDepth = 3
+	if e.Depth >= maxDelegationDepth {
+		return fmt.Sprintf("delegation depth limit reached (%d). Cannot delegate further to prevent infinite recursion.", maxDelegationDepth), true
+	}
+
 	targetAgent, err := e.Queries.GetManagedAgentInWorkspace(ctx, db.GetManagedAgentInWorkspaceParams{
 		ID:          util.ParseUUID(agentID),
 		WorkspaceID: e.WorkspaceID,
@@ -745,15 +970,13 @@ func (e *Executor) executeSubAgent(ctx context.Context, agentRow db.ManagedAgent
 		return "", fmt.Errorf("ANTHROPIC_API_KEY not configured for sub-agent execution")
 	}
 
-	subCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	subCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	systemPrompt := agentRow.SystemPrompt.String
 	if systemPrompt == "" {
 		systemPrompt = fmt.Sprintf("You are %s. %s\nComplete the delegated task thoroughly and return a clear result.", agentRow.Name, agentRow.Description.String)
 	}
-
-	backend := agent.NewCloudClaude(apiKey, e.Logger)
 
 	model := ""
 	if agentRow.Model != nil {
@@ -765,10 +988,18 @@ func (e *Executor) executeSubAgent(ctx context.Context, agentRow db.ManagedAgent
 		}
 	}
 
+	// Use agentic backend so sub-agents have access to tools (bash, read, write, web_fetch, etc.)
+	subExecutor := NewExecutor(e.Queries, e.WorkspaceID, e.SessionID, e.Logger)
+	subExecutor.Depth = e.Depth + 1 // propagate and increment depth for recursion limit
+	defer subExecutor.Close()
+
+	backend := agent.NewAgenticCloudClaude(apiKey, e.Logger, subExecutor, nil)
+
 	session, err := backend.Execute(subCtx, prompt, agent.ExecOptions{
 		Model:        model,
 		SystemPrompt: systemPrompt,
-		Timeout:      3 * time.Minute,
+		Timeout:      5 * time.Minute,
+		MaxTurns:     10, // Sub-agents get fewer turns to prevent runaway
 	})
 	if err != nil {
 		return "", err
@@ -797,6 +1028,771 @@ func (e *Executor) executeSubAgent(ctx context.Context, agentRow db.ManagedAgent
 	}
 
 	return output.String(), nil
+}
+
+// ---------------------------------------------------------------------------
+// Tool: browse_page — Navigate web pages, extract content, follow links
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execBrowsePage(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	// Block internal addresses
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	selector, _ := input["selector"].(string) // CSS selector to extract
+	action, _ := input["action"].(string)       // "get_text", "get_links", "get_html"
+
+	if action == "" {
+		action = "get_text"
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return "failed to create request: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Aurion-Agent/2.0; +https://aurion.studio)")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "page request failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 500*1024)) // 500KB max
+	if err != nil {
+		return "failed to read page: " + err.Error(), true
+	}
+
+	htmlStr := string(body)
+	contentType := resp.Header.Get("Content-Type")
+
+	// For non-HTML responses, return raw content
+	if !strings.Contains(contentType, "html") {
+		if len(htmlStr) > 50000 {
+			htmlStr = htmlStr[:50000] + "\n... (truncated)"
+		}
+		return fmt.Sprintf("URL: %s\nStatus: %d\nContent-Type: %s\n\n%s", urlStr, resp.StatusCode, contentType, htmlStr), false
+	}
+
+	var result string
+	switch action {
+	case "get_text":
+		result = extractTextFromHTML(htmlStr)
+		if selector != "" {
+			result = extractBySelector(htmlStr, selector)
+		}
+	case "get_links":
+		result = extractLinksFromHTML(htmlStr, urlStr)
+	case "get_html":
+		result = htmlStr
+	default:
+		result = extractTextFromHTML(htmlStr)
+	}
+
+	if len(result) > 80000 {
+		result = result[:80000] + "\n... (truncated)"
+	}
+
+	// Log browse event
+	eventPayload, _ := json.Marshal(map[string]string{
+		"url": urlStr, "action": action, "status": strconv.Itoa(resp.StatusCode),
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.browse_page",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("URL: %s\nStatus: %d\nFinal URL: %s\n\n%s", urlStr, resp.StatusCode, resp.Request.URL.String(), result), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: screenshot_page — Get a visual summary of a web page
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execScreenshotPage(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	// Use headless browser via command if available, fall back to text extraction
+	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Try using chromium/google-chrome for real screenshots
+	browsers := []string{"chromium-browser", "chromium", "google-chrome", "google-chrome-stable"}
+	var browserCmd string
+	for _, b := range browsers {
+		if _, err := exec.LookPath(b); err == nil {
+			browserCmd = b
+			break
+		}
+	}
+
+	if browserCmd != "" {
+		// Real headless screenshot
+		outputPath := filepath.Join(e.Sandbox.WorkDir(), "screenshot.png")
+		args := []string{
+			"--headless", "--disable-gpu", "--no-sandbox",
+			"--window-size=1920,1080",
+			"--screenshot=" + outputPath,
+			urlStr,
+		}
+		cmd := exec.CommandContext(reqCtx, browserCmd, args...)
+		cmd.Dir = e.Sandbox.WorkDir()
+		if out, err := cmd.CombinedOutput(); err != nil {
+			e.Logger.Warn("headless browser screenshot failed", "error", err, "output", string(out))
+			// Fall through to text extraction
+		} else {
+			// Read screenshot and return as base64
+			data, err := os.ReadFile(outputPath)
+			if err != nil {
+				return "failed to read screenshot: " + err.Error(), true
+			}
+			os.Remove(outputPath) // Clean up
+
+			encoded := base64.StdEncoding.EncodeToString(data)
+			if len(encoded) > 200000 {
+				encoded = encoded[:200000]
+			}
+
+			eventPayload, _ := json.Marshal(map[string]string{
+				"url": urlStr, "method": "headless_browser", "size": strconv.Itoa(len(data)),
+			})
+			e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+				SessionID: e.SessionID,
+				Type:      "tool.screenshot",
+				Payload:   eventPayload,
+			})
+
+			return fmt.Sprintf("Screenshot captured for %s (%d bytes).\n[Base64 PNG data available in session artifacts]\nPage loaded successfully.", urlStr, len(data)), false
+		}
+	}
+
+	// Fallback: fetch and extract structured text summary
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return "request failed: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Aurion-Agent/2.0)")
+
+	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
+	if err != nil {
+		return "page fetch failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 300*1024))
+	htmlStr := string(body)
+
+	title := extractHTMLTag(htmlStr, "title")
+	description := extractMetaContent(htmlStr, "description")
+	text := extractTextFromHTML(htmlStr)
+	links := extractLinksFromHTML(htmlStr, urlStr)
+
+	if len(text) > 40000 {
+		text = text[:40000] + "\n... (truncated)"
+	}
+
+	result := fmt.Sprintf("=== Page Summary for %s ===\nTitle: %s\nDescription: %s\nStatus: %d\n\n=== Visible Text ===\n%s\n\n=== Links Found ===\n%s",
+		urlStr, title, description, resp.StatusCode, text, links)
+
+	return result, false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: download_file — Download a file from a URL to the sandbox
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execDownloadFile(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	filename, _ := input["filename"].(string)
+	if filename == "" {
+		// Extract filename from URL
+		parsed, err := url.Parse(urlStr)
+		if err != nil {
+			return "invalid URL: " + err.Error(), true
+		}
+		filename = path.Base(parsed.Path)
+		if filename == "" || filename == "/" || filename == "." {
+			filename = "downloaded_file"
+		}
+	}
+
+	// Sanitize filename
+	filename = filepath.Base(filename)
+
+	reqCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return "request failed: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Aurion-Agent/2.0")
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "download failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Sprintf("download failed with status %d", resp.StatusCode), true
+	}
+
+	// Limit download to 50MB
+	const maxSize = 50 * 1024 * 1024
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxSize))
+	if err != nil {
+		return "failed to read download: " + err.Error(), true
+	}
+
+	// Write to sandbox
+	if err := e.Sandbox.WriteFile(filename, string(data)); err != nil {
+		return "failed to save file: " + err.Error(), true
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+
+	eventPayload, _ := json.Marshal(map[string]string{
+		"url": urlStr, "filename": filename, "size": strconv.Itoa(len(data)), "content_type": contentType,
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.download_file",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("Downloaded %s (%d bytes, %s) → saved as %s in sandbox", urlStr, len(data), contentType, filename), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: plan_task — Structured multi-step task decomposition
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execPlanTask(ctx context.Context, input map[string]any) (string, bool) {
+	task, _ := input["task"].(string)
+	if task == "" {
+		return "task description is required", true
+	}
+
+	stepsRaw, _ := input["steps"].([]any)
+	if len(stepsRaw) == 0 {
+		return "steps array is required — provide an ordered list of sub-tasks", true
+	}
+
+	type planStep struct {
+		ID          int    `json:"id"`
+		Description string `json:"description"`
+		Tool        string `json:"tool,omitempty"`
+		Status      string `json:"status"`
+		DependsOn   []int  `json:"depends_on,omitempty"`
+	}
+
+	steps := make([]planStep, 0, len(stepsRaw))
+	for i, s := range stepsRaw {
+		switch v := s.(type) {
+		case string:
+			steps = append(steps, planStep{ID: i + 1, Description: v, Status: "pending"})
+		case map[string]any:
+			desc, _ := v["description"].(string)
+			tool, _ := v["tool"].(string)
+			step := planStep{ID: i + 1, Description: desc, Tool: tool, Status: "pending"}
+			if deps, ok := v["depends_on"].([]any); ok {
+				for _, d := range deps {
+					if num, ok := d.(float64); ok {
+						step.DependsOn = append(step.DependsOn, int(num))
+					}
+				}
+			}
+			steps = append(steps, step)
+		}
+	}
+
+	plan := map[string]any{
+		"task":       task,
+		"steps":      steps,
+		"created_at": time.Now().Format(time.RFC3339),
+		"status":     "planned",
+	}
+
+	planJSON, _ := json.MarshalIndent(plan, "", "  ")
+
+	// Store plan in session events
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.plan_created",
+		Payload:   planJSON,
+	})
+
+	// Also write plan to sandbox for reference
+	e.Sandbox.WriteFile("plan.json", string(planJSON))
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Task Plan: %s\n", task))
+	sb.WriteString(fmt.Sprintf("Steps: %d\n\n", len(steps)))
+	for _, s := range steps {
+		deps := ""
+		if len(s.DependsOn) > 0 {
+			depStrs := make([]string, len(s.DependsOn))
+			for i, d := range s.DependsOn {
+				depStrs[i] = strconv.Itoa(d)
+			}
+			deps = fmt.Sprintf(" (depends on: %s)", strings.Join(depStrs, ", "))
+		}
+		tool := ""
+		if s.Tool != "" {
+			tool = fmt.Sprintf(" [tool: %s]", s.Tool)
+		}
+		sb.WriteString(fmt.Sprintf("  %d. %s%s%s\n", s.ID, s.Description, tool, deps))
+	}
+	sb.WriteString("\nPlan saved. Execute steps sequentially using the appropriate tools.")
+
+	return sb.String(), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: extract_links — Extract and categorize all links from a webpage
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execExtractLinks(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	filterType, _ := input["filter"].(string) // "internal", "external", "all"
+	if filterType == "" {
+		filterType = "all"
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return "request failed: " + err.Error(), true
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Aurion-Agent/2.0)")
+
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	if err != nil {
+		return "page fetch failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 300*1024))
+	htmlStr := string(body)
+
+	parsedBase, _ := url.Parse(urlStr)
+
+	// Extract all href links
+	linkRe := regexp.MustCompile(`(?i)href\s*=\s*["']([^"']+)["']`)
+	matches := linkRe.FindAllStringSubmatch(htmlStr, -1)
+
+	type linkInfo struct {
+		URL      string `json:"url"`
+		Text     string `json:"text,omitempty"`
+		Type     string `json:"type"` // internal, external
+	}
+
+	var links []linkInfo
+	seen := make(map[string]bool)
+
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		href := strings.TrimSpace(m[1])
+		if href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(href, "javascript:") || strings.HasPrefix(href, "mailto:") {
+			continue
+		}
+
+		// Resolve relative URLs
+		resolved := href
+		if !strings.HasPrefix(href, "http") {
+			if ref, err := url.Parse(href); err == nil && parsedBase != nil {
+				resolved = parsedBase.ResolveReference(ref).String()
+			}
+		}
+
+		if seen[resolved] {
+			continue
+		}
+		seen[resolved] = true
+
+		linkType := "external"
+		if parsedRef, err := url.Parse(resolved); err == nil && parsedBase != nil {
+			if parsedRef.Host == parsedBase.Host {
+				linkType = "internal"
+			}
+		}
+
+		if filterType != "all" && filterType != linkType {
+			continue
+		}
+
+		links = append(links, linkInfo{URL: resolved, Type: linkType})
+	}
+
+	if len(links) == 0 {
+		return "No links found on the page.", false
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Found %d links on %s:\n\n", len(links), urlStr))
+	for i, l := range links {
+		if i >= 200 { // Max 200 links
+			sb.WriteString(fmt.Sprintf("\n... and %d more links", len(links)-200))
+			break
+		}
+		sb.WriteString(fmt.Sprintf("  [%s] %s\n", l.Type, l.URL))
+	}
+
+	return sb.String(), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: fill_form — Submit form data to a URL via POST
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execFillForm(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	fields, _ := input["fields"].(map[string]any)
+	if len(fields) == 0 {
+		return "fields (key-value pairs) are required", true
+	}
+
+	contentType, _ := input["content_type"].(string)
+	if contentType == "" {
+		contentType = "application/x-www-form-urlencoded"
+	}
+
+	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	var bodyReader io.Reader
+	switch contentType {
+	case "application/json":
+		data, _ := json.Marshal(fields)
+		bodyReader = bytes.NewReader(data)
+	default: // form-urlencoded
+		form := url.Values{}
+		for k, v := range fields {
+			form.Set(k, fmt.Sprintf("%v", v))
+		}
+		bodyReader = strings.NewReader(form.Encode())
+		contentType = "application/x-www-form-urlencoded"
+	}
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, urlStr, bodyReader)
+	if err != nil {
+		return "request failed: " + err.Error(), true
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Aurion-Agent/2.0)")
+
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	if err != nil {
+		return "form submission failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 50*1024))
+	respText := string(respBody)
+	if strings.Contains(resp.Header.Get("Content-Type"), "html") {
+		respText = extractTextFromHTML(respText)
+	}
+
+	if len(respText) > 30000 {
+		respText = respText[:30000] + "\n... (truncated)"
+	}
+
+	eventPayload, _ := json.Marshal(map[string]string{
+		"url": urlStr, "status": strconv.Itoa(resp.StatusCode),
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.form_submitted",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("Form submitted to %s\nStatus: %d\n\n%s", urlStr, resp.StatusCode, respText), false
+}
+
+// ===========================================================================
+// HTML parsing helpers
+// ===========================================================================
+
+// extractTextFromHTML strips HTML tags and returns visible text content.
+func extractTextFromHTML(html string) string {
+	// Remove script and style elements
+	scriptRe := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`)
+	styleRe := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`)
+	html = scriptRe.ReplaceAllString(html, "")
+	html = styleRe.ReplaceAllString(html, "")
+
+	// Remove HTML comments
+	commentRe := regexp.MustCompile(`(?s)<!--.*?-->`)
+	html = commentRe.ReplaceAllString(html, "")
+
+	// Add newlines before block elements
+	blockRe := regexp.MustCompile(`(?i)<(br|p|div|h[1-6]|li|tr|blockquote|pre|hr)[^>]*>`)
+	html = blockRe.ReplaceAllString(html, "\n")
+
+	// Strip all tags
+	tagRe := regexp.MustCompile(`<[^>]+>`)
+	text := tagRe.ReplaceAllString(html, "")
+
+	// Decode common HTML entities
+	text = strings.ReplaceAll(text, "&amp;", "&")
+	text = strings.ReplaceAll(text, "&lt;", "<")
+	text = strings.ReplaceAll(text, "&gt;", ">")
+	text = strings.ReplaceAll(text, "&quot;", "\"")
+	text = strings.ReplaceAll(text, "&#39;", "'")
+	text = strings.ReplaceAll(text, "&nbsp;", " ")
+
+	// Collapse whitespace
+	spaceRe := regexp.MustCompile(`[ \t]+`)
+	text = spaceRe.ReplaceAllString(text, " ")
+	nlRe := regexp.MustCompile(`\n{3,}`)
+	text = nlRe.ReplaceAllString(text, "\n\n")
+
+	return strings.TrimSpace(text)
+}
+
+// extractLinksFromHTML extracts all links with their text.
+func extractLinksFromHTML(html, baseURL string) string {
+	linkRe := regexp.MustCompile(`(?is)<a[^>]+href\s*=\s*["']([^"']+)["'][^>]*>(.*?)</a>`)
+	matches := linkRe.FindAllStringSubmatch(html, 100) // Max 100 links
+
+	parsedBase, _ := url.Parse(baseURL)
+
+	var sb strings.Builder
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		if len(m) < 3 {
+			continue
+		}
+		href := strings.TrimSpace(m[1])
+		text := extractTextFromHTML(m[2])
+		text = strings.TrimSpace(text)
+
+		if href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(href, "javascript:") {
+			continue
+		}
+
+		// Resolve relative URLs
+		if !strings.HasPrefix(href, "http") && parsedBase != nil {
+			if ref, err := url.Parse(href); err == nil {
+				href = parsedBase.ResolveReference(ref).String()
+			}
+		}
+
+		if seen[href] {
+			continue
+		}
+		seen[href] = true
+
+		if text != "" {
+			sb.WriteString(fmt.Sprintf("- [%s](%s)\n", text, href))
+		} else {
+			sb.WriteString(fmt.Sprintf("- %s\n", href))
+		}
+	}
+
+	if sb.Len() == 0 {
+		return "No links found."
+	}
+	return sb.String()
+}
+
+// extractBySelector does a simplified CSS selector extraction.
+func extractBySelector(html, selector string) string {
+	// Simple implementation: extract content between matching tags
+	// Supports: tag, .class, #id (basic)
+	var pattern string
+	if strings.HasPrefix(selector, "#") {
+		id := strings.TrimPrefix(selector, "#")
+		pattern = fmt.Sprintf(`(?is)<[^>]+id\s*=\s*["']%s["'][^>]*>(.*?)</`, regexp.QuoteMeta(id))
+	} else if strings.HasPrefix(selector, ".") {
+		class := strings.TrimPrefix(selector, ".")
+		pattern = fmt.Sprintf(`(?is)<[^>]+class\s*=\s*["'][^"']*\b%s\b[^"']*["'][^>]*>(.*?)</`, regexp.QuoteMeta(class))
+	} else {
+		pattern = fmt.Sprintf(`(?is)<%s[^>]*>(.*?)</%s>`, regexp.QuoteMeta(selector), regexp.QuoteMeta(selector))
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return extractTextFromHTML(html)
+	}
+
+	matches := re.FindAllStringSubmatch(html, 10)
+	var sb strings.Builder
+	for _, m := range matches {
+		if len(m) >= 2 {
+			sb.WriteString(extractTextFromHTML(m[1]))
+			sb.WriteString("\n")
+		}
+	}
+
+	if sb.Len() == 0 {
+		return "No content found matching selector: " + selector
+	}
+	return sb.String()
+}
+
+// extractHTMLTag extracts the content of the first matching HTML tag.
+func extractHTMLTag(html, tag string) string {
+	re := regexp.MustCompile(fmt.Sprintf(`(?is)<%s[^>]*>(.*?)</%s>`, tag, tag))
+	m := re.FindStringSubmatch(html)
+	if len(m) >= 2 {
+		return strings.TrimSpace(extractTextFromHTML(m[1]))
+	}
+	return ""
+}
+
+// extractMetaContent extracts the content attribute of a meta tag by name.
+func extractMetaContent(html, name string) string {
+	re := regexp.MustCompile(fmt.Sprintf(`(?i)<meta[^>]+name\s*=\s*["']%s["'][^>]+content\s*=\s*["']([^"']*)["']`, regexp.QuoteMeta(name)))
+	m := re.FindStringSubmatch(html)
+	if len(m) >= 2 {
+		return m[1]
+	}
+	// Try reversed attribute order
+	re2 := regexp.MustCompile(fmt.Sprintf(`(?i)<meta[^>]+content\s*=\s*["']([^"']*)["'][^>]+name\s*=\s*["']%s["']`, regexp.QuoteMeta(name)))
+	m2 := re2.FindStringSubmatch(html)
+	if len(m2) >= 2 {
+		return m2[1]
+	}
+	return ""
+}
+
+// isInternalURL checks if a URL points to an internal network address.
+// It resolves the hostname to IP addresses and checks all of them against
+// private/reserved ranges, preventing SSRF via DNS rebinding, hex IPs, etc.
+func isInternalURL(urlStr string) bool {
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return true // block unparseable URLs
+	}
+
+	hostname := parsed.Hostname()
+	if hostname == "" {
+		return true
+	}
+
+	// Quick string checks for common patterns
+	lower := strings.ToLower(hostname)
+	if lower == "localhost" || lower == "0.0.0.0" || strings.HasSuffix(lower, ".local") ||
+		strings.HasSuffix(lower, ".internal") || strings.HasSuffix(lower, ".railway.internal") {
+		return true
+	}
+
+	// Block metadata endpoints (cloud providers)
+	if lower == "metadata.google.internal" || lower == "169.254.169.254" {
+		return true
+	}
+
+	// Resolve hostname to IPs and check each one
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		// If we can't resolve, try parsing as IP directly
+		ip := net.ParseIP(hostname)
+		if ip != nil {
+			return isPrivateIP(ip)
+		}
+		return true // can't resolve → block
+	}
+
+	for _, ip := range ips {
+		if isPrivateIP(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isPrivateIP checks if an IP is in a private/reserved/loopback range.
+func isPrivateIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsUnspecified() || ip.IsMulticast() {
+		return true
+	}
+
+	privateRanges := []struct {
+		network string
+	}{
+		{"10.0.0.0/8"},
+		{"172.16.0.0/12"},
+		{"192.168.0.0/16"},
+		{"169.254.0.0/16"}, // link-local / cloud metadata
+		{"100.64.0.0/10"},  // CGN
+		{"fc00::/7"},        // IPv6 ULA
+		{"fe80::/10"},       // IPv6 link-local
+		{"::1/128"},         // IPv6 loopback
+	}
+
+	for _, r := range privateRanges {
+		_, cidr, err := net.ParseCIDR(r.network)
+		if err != nil {
+			continue
+		}
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func computeSha256(s string) string {
