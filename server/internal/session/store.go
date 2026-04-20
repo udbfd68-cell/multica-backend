@@ -164,6 +164,11 @@ func NewStore(q *db.Queries, hub *realtime.Hub, logger *slog.Logger) *Store {
 	}
 }
 
+// Queries returns the underlying database queries for direct access when needed.
+func (s *Store) Queries() *db.Queries {
+	return s.queries
+}
+
 // ---------------------------------------------------------------------------
 // Create — Start a new session
 // ---------------------------------------------------------------------------

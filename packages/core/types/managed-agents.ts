@@ -247,6 +247,15 @@ export interface SessionInfo {
   updated_at: string;
 }
 
+export interface BudgetStatus {
+  allowed: boolean;
+  daily_spent_usd: number;
+  monthly_spent_usd: number;
+  daily_limit_usd?: number;
+  monthly_limit_usd?: number;
+  reason?: string;
+}
+
 // Memory Stores
 export interface MemoryStore {
   id: string;

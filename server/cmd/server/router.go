@@ -53,7 +53,8 @@ func allowedOrigins() []string {
 }
 
 // NewRouter creates the fully-configured Chi router with all middleware and routes.
-func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Router {
+// It returns the router and the handler so callers can access services (e.g. for startup recovery).
+func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) (chi.Router, *handler.Handler) {
 	queries := db.New(pool)
 	emailSvc := service.NewEmailService()
 
@@ -409,6 +410,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 			r.Route("/api/v1/sessions", func(r chi.Router) {
 				r.Get("/", h.ListManagedSessions)
 				r.Post("/", h.CreateManagedSession)
+				r.Get("/budget", h.GetWorkspaceBudget)
 				r.Route("/{sessionId}", func(r chi.Router) {
 					r.Get("/", h.GetManagedSession)
 					r.Post("/archive", h.ArchiveManagedSession)
@@ -507,7 +509,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 		})
 	})
 
-	return r
+	return r, h
 }
 
 // membershipChecker implements realtime.MembershipChecker using database queries.

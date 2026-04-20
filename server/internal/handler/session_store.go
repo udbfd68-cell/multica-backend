@@ -92,6 +92,23 @@ func (h *Handler) WakeSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, info)
 }
 
+// GetWorkspaceBudget returns the current budget status for the workspace.
+func (h *Handler) GetWorkspaceBudget(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+
+	tracker := h.ManagedSessionService.CostTracker
+	status, err := tracker.CheckBudget(r.Context(), workspaceID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, status)
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

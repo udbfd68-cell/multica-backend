@@ -11,6 +11,9 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/multica-ai/multica/server/internal/util"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
@@ -243,4 +246,95 @@ func (ct *CostTracker) GetSessionCost(ctx context.Context, sessionID string) (*S
 	}
 
 	return report, nil
+}
+
+// ---------------------------------------------------------------------------
+// Budget enforcement
+// ---------------------------------------------------------------------------
+
+// BudgetStatus indicates whether a workspace is within its spending limits.
+type BudgetStatus struct {
+	Allowed      bool    `json:"allowed"`
+	DailySpent   float64 `json:"daily_spent_usd"`
+	MonthlySpent float64 `json:"monthly_spent_usd"`
+	DailyLimit   float64 `json:"daily_limit_usd,omitempty"`
+	MonthlyLimit float64 `json:"monthly_limit_usd,omitempty"`
+	Reason       string  `json:"reason,omitempty"`
+}
+
+// CheckBudget verifies the workspace hasn't exceeded daily or monthly budget.
+// Returns allowed=true if no budget is set or spending is within limits.
+func (ct *CostTracker) CheckBudget(ctx context.Context, workspaceID string) (*BudgetStatus, error) {
+	wid := util.ParseUUID(workspaceID)
+
+	// Read workspace budget columns
+	budget, err := ct.queries.GetWorkspaceBudget(ctx, wid)
+	if err != nil {
+		return nil, fmt.Errorf("get workspace budget: %w", err)
+	}
+
+	// Extract budget limits
+	var dailyLimit, monthlyLimit float64
+	var hasDailyLimit, hasMonthlyLimit bool
+
+	if dl, ok := budget.DailyBudgetUsd.(string); ok && dl != "" {
+		fmt.Sscanf(dl, "%f", &dailyLimit)
+		hasDailyLimit = dailyLimit > 0
+	}
+	if ml, ok := budget.MonthlyBudgetUsd.(string); ok && ml != "" {
+		fmt.Sscanf(ml, "%f", &monthlyLimit)
+		hasMonthlyLimit = monthlyLimit > 0
+	}
+
+	// No budget set — always allowed
+	if !hasDailyLimit && !hasMonthlyLimit {
+		return &BudgetStatus{Allowed: true}, nil
+	}
+
+	now := time.Now().UTC()
+	status := &BudgetStatus{Allowed: true}
+
+	// Check daily budget
+	if hasDailyLimit {
+		status.DailyLimit = dailyLimit
+		dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		dayEnd := dayStart.Add(24 * time.Hour)
+		daily, err := ct.queries.GetWorkspaceCostPeriod(ctx, db.GetWorkspaceCostPeriodParams{
+			WorkspaceID: wid,
+			CreatedAt:   pgtype.Timestamptz{Time: dayStart, Valid: true},
+			CreatedAt_2: pgtype.Timestamptz{Time: dayEnd, Valid: true},
+		})
+		if err == nil {
+			if tc, ok := daily.TotalCost.(string); ok {
+				fmt.Sscanf(tc, "%f", &status.DailySpent)
+			}
+		}
+		if status.DailySpent >= dailyLimit {
+			status.Allowed = false
+			status.Reason = fmt.Sprintf("daily budget exceeded: $%.2f / $%.2f", status.DailySpent, dailyLimit)
+		}
+	}
+
+	// Check monthly budget
+	if hasMonthlyLimit {
+		status.MonthlyLimit = monthlyLimit
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		monthEnd := monthStart.AddDate(0, 1, 0)
+		monthly, err := ct.queries.GetWorkspaceCostPeriod(ctx, db.GetWorkspaceCostPeriodParams{
+			WorkspaceID: wid,
+			CreatedAt:   pgtype.Timestamptz{Time: monthStart, Valid: true},
+			CreatedAt_2: pgtype.Timestamptz{Time: monthEnd, Valid: true},
+		})
+		if err == nil {
+			if tc, ok := monthly.TotalCost.(string); ok {
+				fmt.Sscanf(tc, "%f", &status.MonthlySpent)
+			}
+		}
+		if status.MonthlySpent >= monthlyLimit {
+			status.Allowed = false
+			status.Reason = fmt.Sprintf("monthly budget exceeded: $%.2f / $%.2f", status.MonthlySpent, monthlyLimit)
+		}
+	}
+
+	return status, nil
 }

@@ -12,9 +12,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/multica-ai/multica/server/internal/events"
+	"github.com/multica-ai/multica/server/internal/handler"
 	"github.com/multica-ai/multica/server/internal/logger"
 	"github.com/multica-ai/multica/server/internal/realtime"
 	"github.com/multica-ai/multica/server/internal/service"
+	"github.com/multica-ai/multica/server/internal/util"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
 
@@ -70,7 +72,10 @@ func main() {
 	// Create default user/workspace when auth is disabled
 	EnsureDefaultUser(ctx, pool)
 
-	r := NewRouter(pool, hub, bus)
+	r, h := NewRouter(pool, hub, bus)
+
+	// Recover sessions that were running when the server last stopped.
+	recoverRunningSessions(ctx, h)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
@@ -112,4 +117,39 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info("server stopped")
+}
+
+// recoverRunningSessions marks any sessions that were "running" at shutdown
+// as terminated and reinitialises their Session Store counters so they can
+// be woken later.  This prevents stale "running" sessions from persisting
+// across restarts.
+func recoverRunningSessions(ctx context.Context, h *handler.Handler) {
+	store := h.ManagedSessionService.Store
+	sessions, err := store.Queries().GetRunningSessions(ctx)
+	if err != nil {
+		slog.Warn("failed to query running sessions for recovery", "error", err)
+		return
+	}
+	if len(sessions) == 0 {
+		return
+	}
+
+	slog.Info("recovering stale sessions", "count", len(sessions))
+	for _, s := range sessions {
+		sessionID := util.UUIDToString(s.ID)
+
+		// Mark interrupted — the session wasn't properly closed.
+		// Users can manually wake them via POST /store/wake.
+		_, err := store.Wake(ctx, sessionID)
+		if err != nil {
+			slog.Warn("failed to recover session", "session_id", sessionID, "error", err)
+			continue
+		}
+
+		// Immediately terminate: the agent loop is gone, don't leave them "running".
+		_ = store.Close(ctx, sessionID, "interrupted", map[string]any{
+			"reason": "server_restart",
+		})
+		slog.Info("recovered session", "session_id", sessionID)
+	}
 }

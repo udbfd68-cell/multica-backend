@@ -484,3 +484,23 @@ func (q *Queries) GetWorkspaceDailyCost(ctx context.Context, arg GetWorkspaceDai
 	}
 	return items, nil
 }
+
+// ---------------------------------------------------------------------------
+// Workspace budget
+// ---------------------------------------------------------------------------
+
+const getWorkspaceBudget = `-- name: GetWorkspaceBudget :one
+SELECT daily_budget_usd, monthly_budget_usd FROM workspace WHERE id = $1
+`
+
+type GetWorkspaceBudgetRow struct {
+	DailyBudgetUsd   interface{} `json:"daily_budget_usd"`
+	MonthlyBudgetUsd interface{} `json:"monthly_budget_usd"`
+}
+
+func (q *Queries) GetWorkspaceBudget(ctx context.Context, id pgtype.UUID) (GetWorkspaceBudgetRow, error) {
+	row := q.db.QueryRow(ctx, getWorkspaceBudget, id)
+	var i GetWorkspaceBudgetRow
+	err := row.Scan(&i.DailyBudgetUsd, &i.MonthlyBudgetUsd)
+	return i, err
+}

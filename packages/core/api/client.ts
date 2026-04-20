@@ -75,6 +75,7 @@ import type {
   StoreEvent,
   SessionCostReport,
   SessionInfo,
+  BudgetStatus,
   MemoryStore,
   CreateMemoryStoreRequest,
   MemoryDocument,
@@ -966,8 +967,11 @@ export class ApiClient {
   }
 
   // Sessions
-  async listManagedSessions(): Promise<PaginatedResponse<ManagedSession>> {
-    return this.fetch("/api/v1/sessions");
+  async listManagedSessions(opts?: { agentId?: string }): Promise<PaginatedResponse<ManagedSession>> {
+    const params = new URLSearchParams();
+    if (opts?.agentId) params.set("agent_id", opts.agentId);
+    const qs = params.toString();
+    return this.fetch(`/api/v1/sessions${qs ? `?${qs}` : ""}`);
   }
 
   async createManagedSession(data: CreateManagedSessionRequest): Promise<ManagedSession> {
@@ -1027,6 +1031,10 @@ export class ApiClient {
 
   async wakeSession(sessionId: string): Promise<SessionInfo> {
     return this.fetch(`/api/v1/sessions/${sessionId}/store/wake`, { method: "POST" });
+  }
+
+  async getWorkspaceBudget(): Promise<BudgetStatus> {
+    return this.fetch("/api/v1/sessions/budget");
   }
 
   // Session Threads

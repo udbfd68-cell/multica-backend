@@ -14,6 +14,7 @@ import {
   KeyRound,
   Terminal,
   Plug,
+  Activity,
 } from "lucide-react";
 import type { Agent, RuntimeDevice, MemberWithUser } from "@aurion/core/types";
 import {
@@ -40,17 +41,19 @@ import { SettingsTab } from "./tabs/settings-tab";
 import { EnvTab } from "./tabs/env-tab";
 import { CustomArgsTab } from "./tabs/custom-args-tab";
 import { McpTab } from "./tabs/mcp-tab";
+import { SessionsTab } from "./tabs/sessions-tab";
 
 function getRuntimeDevice(agent: Agent, runtimes: RuntimeDevice[]): RuntimeDevice | undefined {
   return runtimes.find((runtime) => runtime.id === agent.runtime_id);
 }
 
-type DetailTab = "instructions" | "skills" | "tasks" | "mcp" | "env" | "custom_args" | "settings";
+type DetailTab = "instructions" | "skills" | "tasks" | "sessions" | "mcp" | "env" | "custom_args" | "settings";
 
 const detailTabs: { id: DetailTab; label: string; icon: typeof FileText }[] = [
   { id: "instructions", label: "Instructions", icon: FileText },
   { id: "skills", label: "Skills", icon: BookOpenText },
   { id: "tasks", label: "Tasks", icon: ListTodo },
+  { id: "sessions", label: "Sessions", icon: Activity },
   { id: "mcp", label: "MCP Servers", icon: Plug },
   { id: "env", label: "Environment", icon: KeyRound },
   { id: "custom_args", label: "Custom Args", icon: Terminal },
@@ -171,6 +174,7 @@ export function AgentDetail({
           <SkillsTab agent={agent} />
         )}
         {activeTab === "tasks" && <TasksTab agent={agent} />}
+        {activeTab === "sessions" && <SessionsTab agent={agent} />}
         {activeTab === "mcp" && <McpTab agent={agent} />}
         {activeTab === "env" && (
           <EnvTab

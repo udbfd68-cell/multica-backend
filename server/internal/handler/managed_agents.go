@@ -562,6 +562,15 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Budget check: reject if workspace has exceeded daily/monthly limit
+	budgetStatus, err := h.ManagedSessionService.CostTracker.CheckBudget(r.Context(), workspaceID)
+	if err != nil {
+		slog.Warn("budget check failed, allowing session", "error", err)
+	} else if !budgetStatus.Allowed {
+		writeError(w, http.StatusPaymentRequired, budgetStatus.Reason)
+		return
+	}
+
 	params := db.CreateManagedSessionParams{
 		WorkspaceID:  parseUUID(workspaceID),
 		AgentID:      agent.ID,
@@ -630,6 +639,25 @@ func (h *Handler) ListManagedSessions(w http.ResponseWriter, r *http.Request) {
 		if v, err := parseInt32(o); err == nil && v >= 0 {
 			offset = v
 		}
+	}
+
+	// Filter by agent_id if provided
+	if agentID := r.URL.Query().Get("agent_id"); agentID != "" {
+		sessions, err := h.Queries.ListManagedSessionsByAgent(r.Context(), db.ListManagedSessionsByAgentParams{
+			AgentID: parseUUID(agentID),
+			Limit:   limit,
+			Offset:  offset,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list sessions")
+			return
+		}
+		resp := make([]ManagedSessionResponse, len(sessions))
+		for i, s := range sessions {
+			resp[i] = managedSessionToResponse(s)
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"data": resp})
+		return
 	}
 
 	sessions, err := h.Queries.ListManagedSessions(r.Context(), db.ListManagedSessionsParams{
