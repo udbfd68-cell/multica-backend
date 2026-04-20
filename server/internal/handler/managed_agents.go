@@ -1023,6 +1023,118 @@ func (h *Handler) GetVault(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
+// Agent Trigger — Create and execute a managed session for an agent
+// ---------------------------------------------------------------------------
+
+type TriggerAgentRequest struct {
+	Prompt        string   `json:"prompt"`
+	Title         *string  `json:"title,omitempty"`
+	EnvironmentID *string  `json:"environment_id,omitempty"`
+	VaultIds      []string `json:"vault_ids,omitempty"`
+	Source        string   `json:"source,omitempty"` // "manual", "webhook", "api", "schedule"
+}
+
+// TriggerAgent creates a managed session and immediately executes it.
+// POST /api/v1/agents/{agentId}/trigger
+func (h *Handler) TriggerAgent(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+	agentID := chi.URLParam(r, "agentId")
+
+	var req TriggerAgentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Prompt == "" {
+		writeError(w, http.StatusBadRequest, "prompt is required")
+		return
+	}
+
+	agent, err := h.Queries.GetManagedAgentInWorkspace(r.Context(), db.GetManagedAgentInWorkspaceParams{
+		ID:          parseUUID(agentID),
+		WorkspaceID: parseUUID(workspaceID),
+	})
+	if err != nil {
+		writeError(w, http.StatusNotFound, "agent not found")
+		return
+	}
+	if agent.ArchivedAt.Valid {
+		writeError(w, http.StatusBadRequest, "agent is archived")
+		return
+	}
+
+	// Budget check
+	budgetStatus, err := h.ManagedSessionService.CostTracker.CheckBudget(r.Context(), workspaceID)
+	if err != nil {
+		slog.Warn("budget check failed, allowing trigger", "error", err)
+	} else if !budgetStatus.Allowed {
+		writeError(w, http.StatusPaymentRequired, budgetStatus.Reason)
+		return
+	}
+
+	// Create session
+	params := db.CreateManagedSessionParams{
+		WorkspaceID:  parseUUID(workspaceID),
+		AgentID:      agent.ID,
+		AgentVersion: agent.Version,
+	}
+	if req.EnvironmentID != nil {
+		params.EnvironmentID = parseUUID(*req.EnvironmentID)
+	}
+
+	source := req.Source
+	if source == "" {
+		source = "api"
+	}
+	title := req.Prompt
+	if req.Title != nil {
+		title = *req.Title
+	}
+	if len(title) > 100 {
+		title = title[:100]
+	}
+	params.Title = pgtype.Text{String: title, Valid: true}
+
+	vaultUUIDs := make([]pgtype.UUID, 0, len(req.VaultIds))
+	for _, vid := range req.VaultIds {
+		vaultUUIDs = append(vaultUUIDs, parseUUID(vid))
+	}
+	params.VaultIds = vaultUUIDs
+
+	session, err := h.Queries.CreateManagedSession(r.Context(), params)
+	if err != nil {
+		slog.Error("failed to create triggered session", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+
+	// Record user message + execute
+	payload, _ := json.Marshal(map[string]string{"type": "user.message", "content": req.Prompt})
+	h.Queries.CreateSessionEvent(r.Context(), db.CreateSessionEventParams{
+		SessionID: session.ID,
+		Type:      "user.message",
+		Payload:   payload,
+	})
+
+	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
+		slog.Error("failed to execute triggered session", "error", err, "session_id", uuidToString(session.ID))
+		h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
+			ID:     session.ID,
+			Status: "terminated",
+		})
+		session.Status = "terminated"
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"session": managedSessionToResponse(session),
+		"source":  source,
+	})
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

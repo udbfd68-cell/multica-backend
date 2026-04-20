@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Activity, ArrowLeft, Clock, DollarSign } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Activity, ArrowLeft, Clock, DollarSign, Play, Send } from "lucide-react";
 import type { Agent, ManagedSession } from "@aurion/core/types";
 import { Skeleton } from "@aurion/ui/components/ui/skeleton";
 import { Badge } from "@aurion/ui/components/ui/badge";
 import { Button } from "@aurion/ui/components/ui/button";
+import { Input } from "@aurion/ui/components/ui/input";
 import { api } from "@aurion/core/api";
 import { useRequiredWorkspaceSlug } from "@aurion/core/paths";
 import { SessionView } from "../session-view";
@@ -34,9 +35,11 @@ export function SessionsTab({ agent }: { agent: Agent }) {
   const [sessions, setSessions] = useState<ManagedSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ManagedSession | null>(null);
+  const [triggerPrompt, setTriggerPrompt] = useState("");
+  const [triggering, setTriggering] = useState(false);
   const workspaceSlug = useRequiredWorkspaceSlug();
 
-  useEffect(() => {
+  const loadSessions = useCallback(() => {
     setLoading(true);
     api
       .listManagedSessions({ agentId: agent.id })
@@ -44,6 +47,28 @@ export function SessionsTab({ agent }: { agent: Agent }) {
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
   }, [agent.id]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  const handleTrigger = async () => {
+    if (!triggerPrompt.trim() || triggering) return;
+    setTriggering(true);
+    try {
+      const result = await api.triggerAgent(agent.id, {
+        prompt: triggerPrompt.trim(),
+        source: "manual",
+      });
+      setTriggerPrompt("");
+      setSelected(result.session);
+      loadSessions();
+    } catch {
+      // Error handled silently — session list will reflect state
+    } finally {
+      setTriggering(false);
+    }
+  };
 
   // Drill-down: show SessionView for selected session
   if (selected) {
@@ -75,12 +100,20 @@ export function SessionsTab({ agent }: { agent: Agent }) {
 
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Activity className="mb-3 h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">No sessions yet</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">
-          Sessions are created when the agent runs tasks
-        </p>
+      <div className="space-y-4">
+        <TriggerBar
+          prompt={triggerPrompt}
+          setPrompt={setTriggerPrompt}
+          onTrigger={handleTrigger}
+          triggering={triggering}
+        />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Activity className="mb-3 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No sessions yet</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">
+            Type a prompt above to trigger the agent
+          </p>
+        </div>
       </div>
     );
   }
@@ -93,7 +126,14 @@ export function SessionsTab({ agent }: { agent: Agent }) {
   });
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-3">
+      <TriggerBar
+        prompt={triggerPrompt}
+        setPrompt={setTriggerPrompt}
+        onTrigger={handleTrigger}
+        triggering={triggering}
+      />
+      <div className="space-y-1.5">
       {sorted.map((s) => {
         const st = statusStyles[s.status] ?? statusStyles.idle;
         return (
@@ -137,6 +177,44 @@ export function SessionsTab({ agent }: { agent: Agent }) {
           </button>
         );
       })}
+    </div>
+    </div>
+  );
+}
+
+function TriggerBar({
+  prompt,
+  setPrompt,
+  onTrigger,
+  triggering,
+}: {
+  prompt: string;
+  setPrompt: (v: string) => void;
+  onTrigger: () => void;
+  triggering: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        placeholder="Enter a prompt to trigger the agent..."
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onTrigger()}
+        disabled={triggering}
+        className="flex-1"
+      />
+      <Button
+        size="sm"
+        onClick={onTrigger}
+        disabled={!prompt.trim() || triggering}
+      >
+        {triggering ? (
+          <Play className="h-4 w-4 animate-pulse" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+        <span className="ml-1.5">Run</span>
+      </Button>
     </div>
   );
 }

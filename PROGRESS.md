@@ -91,9 +91,36 @@ Implementation of the 3-component Managed Agents architecture (Session Store + C
 - **GET /api/v1/sessions/budget**: API endpoint for frontend budget display
 - **BudgetStatus type**: `packages/core/types/managed-agents.ts`
 
-## Phase 3 — TODO
+## Phase 3 — Agent Triggers, Budget UI, Compaction ✅
+
+### Agent Trigger API
+- **POST /api/v1/agents/{agentId}/trigger**: Creates a managed session and immediately executes it
+- Request body: `{ prompt, title?, environment_id?, vault_ids?, source? }`
+- Budget check before session creation (402 on exceed)
+- Source tracking: "manual", "webhook", "api", "schedule"
+- Handler: `TriggerAgent` in `managed_agents.go`
+
+### Workspace Budget Settings UI
+- **Settings > Usage tab**: New workspace settings tab with budget management
+- Real-time spending display: daily and monthly with progress bars
+- Budget limit configuration: daily and monthly USD limits
+- Visual warnings at 80% usage, "Over limit" badge when exceeded
+- **PUT /api/v1/sessions/budget**: Backend endpoint to update budget limits
+- `UpdateWorkspaceBudget` query in `session_store.sql.go`
+
+### Frontend Trigger UI
+- **Sessions tab**: "Quick Run" input bar at the top of sessions list
+- Enter prompt + click "Run" to trigger agent and auto-navigate to session view
+- Also shown in empty state with guidance text
+
+### Context Compaction Enhancement
+- `BuildCompactionSummary` enhanced: now includes user request summaries
+- `BuildCompactionPrompt`: generates prompt for cheaper model (Haiku) compaction
+- `CompactFunc` type: allows harness to inject model-based compaction
+
+## Phase 4 — TODO
 - [ ] Docker-based sandbox (container-per-session, cattle pattern)
 - [ ] Credential isolation via MCP proxy (vault tokens never in sandbox)
-- [ ] Scheduler (cron + webhook triggers for managed sessions)
-- [ ] Context compaction via cheaper model (Haiku) — currently heuristic-based
+- [ ] Public webhook endpoint (unauthenticated agent trigger via token)
+- [ ] Model-based compaction integration (call Haiku in harness loop)
 - [ ] E2E tests for Session Store API

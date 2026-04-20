@@ -378,6 +378,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) (chi.Rout
 					r.Delete("/", h.DeleteManagedAgent)
 					r.Post("/archive", h.ArchiveManagedAgent)
 					r.Get("/versions", h.ListManagedAgentVersions)
+					r.Post("/trigger", h.TriggerAgent)
 					// MCP connectors per agent
 					r.Route("/mcp", func(r chi.Router) {
 						r.Get("/", h.ListAgentMcpConnectors)
@@ -411,6 +412,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) (chi.Rout
 				r.Get("/", h.ListManagedSessions)
 				r.Post("/", h.CreateManagedSession)
 				r.Get("/budget", h.GetWorkspaceBudget)
+				r.Put("/budget", h.UpdateWorkspaceBudget)
 				r.Route("/{sessionId}", func(r chi.Router) {
 					r.Get("/", h.GetManagedSession)
 					r.Post("/archive", h.ArchiveManagedSession)

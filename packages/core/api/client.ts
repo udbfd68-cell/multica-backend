@@ -938,6 +938,19 @@ export class ApiClient {
     await this.fetch(`/api/v1/agents/${agentId}/archive`, { method: "POST" });
   }
 
+  async triggerAgent(agentId: string, data: {
+    prompt: string;
+    title?: string;
+    environment_id?: string;
+    vault_ids?: string[];
+    source?: string;
+  }): Promise<{ session: ManagedSession; source: string }> {
+    return this.fetch(`/api/v1/agents/${agentId}/trigger`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async listManagedAgentVersions(agentId: string): Promise<PaginatedResponse<ManagedAgentVersion>> {
     return this.fetch(`/api/v1/agents/${agentId}/versions`);
   }
@@ -1035,6 +1048,16 @@ export class ApiClient {
 
   async getWorkspaceBudget(): Promise<BudgetStatus> {
     return this.fetch("/api/v1/sessions/budget");
+  }
+
+  async updateWorkspaceBudget(data: {
+    daily_budget_usd: number;
+    monthly_budget_usd: number;
+  }): Promise<void> {
+    await this.fetch("/api/v1/sessions/budget", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   }
 
   // Session Threads

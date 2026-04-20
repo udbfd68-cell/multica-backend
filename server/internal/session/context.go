@@ -191,8 +191,8 @@ func ShouldCompact(tokenEstimate int, maxTokens int) bool {
 }
 
 // BuildCompactionSummary creates a summary of events that were compacted.
-// In a production system, this would call a cheaper model (e.g. Haiku).
-// For now, it creates a structured summary from the event data.
+// This is the fast heuristic fallback. For model-based compaction, use
+// CompactWithModel which calls a cheaper model (e.g. Haiku).
 func BuildCompactionSummary(events []Event) string {
 	var sb strings.Builder
 	sb.WriteString("# Session Summary (Compacted)\n\n")
@@ -201,6 +201,7 @@ func BuildCompactionSummary(events []Event) string {
 	counts := make(map[EventType]int)
 	var toolCalls []string
 	var lastAssistantMsg string
+	var userMessages []string
 
 	for _, evt := range events {
 		counts[evt.Type]++
@@ -209,6 +210,8 @@ func BuildCompactionSummary(events []Event) string {
 			toolCalls = append(toolCalls, evt.Data.ToolName)
 		case EventAssistantMessage:
 			lastAssistantMsg = evt.Data.Content
+		case EventUserMessage:
+			userMessages = append(userMessages, evt.Data.Content)
 		}
 	}
 
@@ -228,12 +231,81 @@ func BuildCompactionSummary(events []Event) string {
 		}
 	}
 
+	// Include user intent summary
+	if len(userMessages) > 0 {
+		sb.WriteString("\n## User Requests\n")
+		for i, msg := range userMessages {
+			if i >= 5 {
+				fmt.Fprintf(&sb, "- ... and %d more\n", len(userMessages)-5)
+				break
+			}
+			summary := msg
+			if len(summary) > 200 {
+				summary = summary[:200] + "..."
+			}
+			fmt.Fprintf(&sb, "- %s\n", summary)
+		}
+	}
+
 	if lastAssistantMsg != "" {
 		sb.WriteString("\n## Last Assistant Output\n")
 		if len(lastAssistantMsg) > 2000 {
 			lastAssistantMsg = lastAssistantMsg[:2000] + "..."
 		}
 		sb.WriteString(lastAssistantMsg)
+	}
+
+	return sb.String()
+}
+
+// CompactFunc is a function that generates a summary from events.
+// The default is BuildCompactionSummary (heuristic). The harness can
+// replace this with a model-based implementation.
+type CompactFunc func(events []Event) string
+
+// BuildCompactionPrompt creates a prompt suitable for sending to a cheaper
+// model (e.g. Claude Haiku) to generate a compaction summary.
+func BuildCompactionPrompt(events []Event) string {
+	var sb strings.Builder
+	sb.WriteString("Summarize this agent session conversation concisely. ")
+	sb.WriteString("Focus on: (1) what the user asked for, (2) what tools were used and their results, ")
+	sb.WriteString("(3) the current state and any pending work. Be factual and brief.\n\n")
+
+	for _, evt := range events {
+		switch evt.Type {
+		case EventUserMessage:
+			content := evt.Data.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			fmt.Fprintf(&sb, "USER: %s\n", content)
+		case EventAssistantMessage:
+			content := evt.Data.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+			fmt.Fprintf(&sb, "ASSISTANT: %s\n", content)
+		case EventToolCall:
+			input := ""
+			if evt.Data.Input != nil {
+				inputBytes, _ := json.Marshal(evt.Data.Input)
+				input = string(inputBytes)
+				if len(input) > 200 {
+					input = input[:200] + "..."
+				}
+			}
+			fmt.Fprintf(&sb, "TOOL_CALL: %s(%s)\n", evt.Data.ToolName, input)
+		case EventToolResult:
+			output := ""
+			if evt.Data.Output != nil {
+				outputBytes, _ := json.Marshal(evt.Data.Output)
+				output = string(outputBytes)
+				if len(output) > 200 {
+					output = output[:200] + "..."
+				}
+			}
+			fmt.Fprintf(&sb, "TOOL_RESULT: %s\n", output)
+		}
 	}
 
 	return sb.String()

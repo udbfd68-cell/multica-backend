@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/internal/session"
 )
 
@@ -107,6 +110,36 @@ func (h *Handler) GetWorkspaceBudget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, status)
+}
+
+// UpdateWorkspaceBudget sets the daily and monthly budget limits for the workspace.
+func (h *Handler) UpdateWorkspaceBudget(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireUserID(w, r); !ok {
+		return
+	}
+	workspaceID := ctxWorkspaceID(r.Context())
+
+	var req struct {
+		DailyBudgetUSD  float64 `json:"daily_budget_usd"`
+		MonthlyBudgetUSD float64 `json:"monthly_budget_usd"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := h.Queries.UpdateWorkspaceBudget(r.Context(), db.UpdateWorkspaceBudgetParams{
+		ID:              parseUUID(workspaceID),
+		DailyBudgetUsd:  req.DailyBudgetUSD,
+		MonthlyBudgetUsd: req.MonthlyBudgetUSD,
+	})
+	if err != nil {
+		slog.Error("failed to update workspace budget", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to update budget")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // ---------------------------------------------------------------------------

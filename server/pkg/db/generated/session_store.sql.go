@@ -504,3 +504,22 @@ func (q *Queries) GetWorkspaceBudget(ctx context.Context, id pgtype.UUID) (GetWo
 	err := row.Scan(&i.DailyBudgetUsd, &i.MonthlyBudgetUsd)
 	return i, err
 }
+
+// ---------------------------------------------------------------------------
+// Workspace Budget Update
+// ---------------------------------------------------------------------------
+
+const updateWorkspaceBudget = `-- name: UpdateWorkspaceBudget :exec
+UPDATE workspace SET daily_budget_usd = $2, monthly_budget_usd = $3 WHERE id = $1
+`
+
+type UpdateWorkspaceBudgetParams struct {
+	ID               pgtype.UUID `json:"id"`
+	DailyBudgetUsd   float64     `json:"daily_budget_usd"`
+	MonthlyBudgetUsd float64     `json:"monthly_budget_usd"`
+}
+
+func (q *Queries) UpdateWorkspaceBudget(ctx context.Context, arg UpdateWorkspaceBudgetParams) error {
+	_, err := q.db.Exec(ctx, updateWorkspaceBudget, arg.ID, arg.DailyBudgetUsd, arg.MonthlyBudgetUsd)
+	return err
+}
