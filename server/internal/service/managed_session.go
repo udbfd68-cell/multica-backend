@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/internal/crypto"
 	"github.com/multica-ai/multica/server/internal/events"
 	"github.com/multica-ai/multica/server/internal/executor"
 	"github.com/multica-ai/multica/server/internal/mcpclient"
+	"github.com/multica-ai/multica/server/internal/oauth"
 	"github.com/multica-ai/multica/server/internal/realtime"
 	"github.com/multica-ai/multica/server/internal/stream"
 	"github.com/multica-ai/multica/server/internal/util"
@@ -84,6 +86,10 @@ func (s *ManagedSessionService) ExecuteSession(
 		var mcpPool *mcpclient.Pool
 		var mcpToolDefs []agent.McpToolDef
 		mcpConfigs := loadMcpConfigs(agentRow)
+
+		// Also load DB-stored connectors (with OAuth credential injection)
+		dbConfigs := s.loadMcpConnectorsFromDB(ctx, agentRow.ID, session.WorkspaceID)
+		mcpConfigs = append(mcpConfigs, dbConfigs...)
 		if len(mcpConfigs) > 0 {
 			pool, err := mcpclient.NewPool(ctx, mcpConfigs, s.Logger)
 			if err != nil {
@@ -446,6 +452,104 @@ func loadMcpConfigs(a db.ManagedAgent) []mcpclient.Config {
 		})
 	}
 	return configs
+}
+
+// loadMcpConnectorsFromDB loads enabled MCP connectors from the agent_mcp_connector
+// table, decrypts OAuth credentials from the vault, and injects access tokens
+// as environment variables into the MCP server configs.
+func (s *ManagedSessionService) loadMcpConnectorsFromDB(ctx context.Context, agentID, workspaceID pgtype.UUID) []mcpclient.Config {
+	connectors, err := s.Queries.ListEnabledAgentMcpConnectors(ctx, agentID, workspaceID)
+	if err != nil {
+		s.Logger.Warn("failed to load MCP connectors from DB", "error", err)
+		return nil
+	}
+
+	var configs []mcpclient.Config
+	for _, c := range connectors {
+		cfg := mcpclient.Config{
+			Name:      c.Name,
+			Transport: c.Transport,
+			Command:   c.Command,
+			URL:       c.ServerUrl,
+		}
+
+		// Parse args
+		if c.Args != nil {
+			var args []string
+			if json.Unmarshal(c.Args, &args) == nil {
+				cfg.Args = args
+			}
+		}
+
+		// Parse env config
+		env := make(map[string]string)
+		if c.EnvConfig != nil {
+			json.Unmarshal(c.EnvConfig, &env)
+		}
+
+		// If connector has a vault credential, decrypt and inject tokens
+		if c.VaultCredentialID.Valid {
+			cred, err := s.Queries.GetVaultCredential(ctx, c.VaultCredentialID)
+			if err == nil && cred.EncryptedPayload != nil {
+				decrypted, err := crypto.Decrypt(string(cred.EncryptedPayload))
+				if err == nil {
+					var credData map[string]any
+					if json.Unmarshal([]byte(decrypted), &credData) == nil {
+						// Extract access token
+						if accessToken, ok := credData["access_token"].(string); ok && accessToken != "" {
+							// Check if token needs refresh
+							if refreshToken, ok := credData["refresh_token"].(string); ok && refreshToken != "" {
+								if s.isTokenExpired(credData) {
+									newToken, _, refreshErr := oauth.RefreshGoogleToken(refreshToken)
+									if refreshErr == nil && newToken != "" {
+										accessToken = newToken
+										s.Logger.Info("refreshed OAuth token for MCP connector",
+											"connector", c.Name)
+									} else {
+										s.Logger.Warn("failed to refresh OAuth token",
+											"connector", c.Name, "error", refreshErr)
+									}
+								}
+							}
+							// Inject token into MCP server env
+							env["GOOGLE_ACCESS_TOKEN"] = accessToken
+							env["OAUTH_ACCESS_TOKEN"] = accessToken
+						}
+						// Also inject email if available
+						if email, ok := credData["email"].(string); ok {
+							env["GOOGLE_USER_EMAIL"] = email
+						}
+					}
+				} else {
+					s.Logger.Warn("failed to decrypt vault credential",
+						"connector", c.Name, "error", err)
+				}
+			}
+		}
+
+		cfg.Env = env
+		configs = append(configs, cfg)
+	}
+
+	return configs
+}
+
+// isTokenExpired checks if an OAuth token is expired based on obtained_at + expires_in.
+func (s *ManagedSessionService) isTokenExpired(credData map[string]any) bool {
+	obtainedAt, ok := credData["obtained_at"].(string)
+	if !ok {
+		return true // If we can't tell, assume expired
+	}
+	expiresIn, ok := credData["expires_in"].(float64)
+	if !ok || expiresIn <= 0 {
+		return true
+	}
+	t, err := time.Parse(time.RFC3339, obtainedAt)
+	if err != nil {
+		return true
+	}
+	// Token expired if obtained_at + expires_in - 5min buffer < now
+	return time.Now().After(t.Add(time.Duration(expiresIn-300) * time.Second))
 }
 
 // executorAdapter wraps executor.Executor to satisfy the agent.ToolExecutor

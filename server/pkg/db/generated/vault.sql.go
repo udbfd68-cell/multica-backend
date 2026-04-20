@@ -132,6 +132,17 @@ func (q *Queries) ListVaultCredentials(ctx context.Context, vaultID pgtype.UUID)
 	return items, nil
 }
 
+const getVaultCredential = `-- name: GetVaultCredential :one
+SELECT id, vault_id, mcp_server_url, auth_type, encrypted_payload, expires_at, created_at, archived_at FROM vault_credential WHERE id = $1 AND archived_at IS NULL
+`
+
+func (q *Queries) GetVaultCredential(ctx context.Context, id pgtype.UUID) (VaultCredential, error) {
+	row := q.db.QueryRow(ctx, getVaultCredential, id)
+	var i VaultCredential
+	err := row.Scan(&i.ID, &i.VaultID, &i.McpServerUrl, &i.AuthType, &i.EncryptedPayload, &i.ExpiresAt, &i.CreatedAt, &i.ArchivedAt)
+	return i, err
+}
+
 const archiveVaultCredential = `-- name: ArchiveVaultCredential :exec
 UPDATE vault_credential SET archived_at = now() WHERE id = $1
 `

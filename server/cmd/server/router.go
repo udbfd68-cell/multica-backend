@@ -128,6 +128,9 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 	r.With(authLimiter).Post("/auth/google", h.GoogleLogin)
 	r.Post("/auth/logout", h.Logout)
 
+	// MCP OAuth callback (public — Google redirects here after consent)
+	r.Get("/api/v1/mcp/oauth/callback", h.McpOAuthCallback)
+
 	// Daemon API routes (require daemon token or valid user token)
 	r.Route("/api/daemon", func(r chi.Router) {
 		r.Use(middleware.NoAuthDaemon())
@@ -472,6 +475,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 
 			// MCP Server Registry & Catalog
 			r.Get("/api/v1/mcp/catalog", h.ListMcpCatalog)
+			r.Post("/api/v1/mcp/oauth/init", h.InitMcpOAuth)
 			r.Route("/api/v1/mcp/registry", func(r chi.Router) {
 				r.Get("/", h.ListMcpRegistry)
 				r.Post("/", h.CreateMcpRegistry)

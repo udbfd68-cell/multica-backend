@@ -1181,4 +1181,17 @@ export class ApiClient {
   async deleteMcpConnector(agentId: string, connectorId: string): Promise<void> {
     await this.fetch(`/api/v1/agents/${agentId}/mcp/${connectorId}`, { method: "DELETE" });
   }
+
+  async initMcpOAuth(params: {
+    provider: string;
+    agent_id: string;
+    connector_id: string;
+    vault_id: string;
+    redirect_url: string;
+  }): Promise<{ auth_url: string; state: string }> {
+    return this.fetch("/api/v1/mcp/oauth/init", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  }
 }

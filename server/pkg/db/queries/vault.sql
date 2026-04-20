@@ -36,6 +36,9 @@ FROM vault_credential
 WHERE vault_id = $1 AND archived_at IS NULL
 ORDER BY created_at DESC;
 
+-- name: GetVaultCredential :one
+SELECT * FROM vault_credential WHERE id = $1 AND archived_at IS NULL;
+
 -- name: ArchiveVaultCredential :exec
 UPDATE vault_credential SET archived_at = now() WHERE id = $1;
 
