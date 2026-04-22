@@ -61,3 +61,8 @@ data/
 .vercel
 
 _tmp/
+
+railway-vars.json
+input.txt
+.envcheck
+.env.temp
