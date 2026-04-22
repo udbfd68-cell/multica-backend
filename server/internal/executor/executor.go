@@ -43,6 +43,21 @@ type ToolResult struct {
 	IsError bool
 }
 
+// toolExecutorAdapter wraps *Executor to satisfy agent.ToolExecutor (which
+// returns agent.ToolExecResult). Defined here to avoid a circular dependency.
+type toolExecutorAdapter struct {
+	exec *Executor
+}
+
+func (a *toolExecutorAdapter) Execute(ctx context.Context, toolName, callID string, input map[string]any) agent.ToolExecResult {
+	r := a.exec.Execute(ctx, toolName, callID, input)
+	return agent.ToolExecResult{
+		CallID:  r.CallID,
+		Output:  r.Output,
+		IsError: r.IsError,
+	}
+}
+
 // Executor runs tools server-side on behalf of a managed agent session.
 type Executor struct {
 	Queries     *db.Queries
@@ -1005,7 +1020,7 @@ func (e *Executor) executeSubAgent(ctx context.Context, agentRow db.ManagedAgent
 	subExecutor.Depth = e.Depth + 1 // propagate and increment depth for recursion limit
 	defer subExecutor.Close()
 
-	backend := agent.NewAgenticCloudClaude(apiKey, e.Logger, subExecutor, nil)
+	backend := agent.NewAgenticCloudClaude(apiKey, e.Logger, &toolExecutorAdapter{exec: subExecutor}, nil)
 
 	session, err := backend.Execute(subCtx, prompt, agent.ExecOptions{
 		Model:        model,

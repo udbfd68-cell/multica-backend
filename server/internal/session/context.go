@@ -297,7 +297,7 @@ func BuildCompactionPrompt(events []Event) string {
 			fmt.Fprintf(&sb, "TOOL_CALL: %s(%s)\n", evt.Data.ToolName, input)
 		case EventToolResult:
 			output := ""
-			if evt.Data.Output != nil {
+			if evt.Data.Output != "" {
 				outputBytes, _ := json.Marshal(evt.Data.Output)
 				output = string(outputBytes)
 				if len(output) > 200 {
