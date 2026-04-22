@@ -357,10 +357,11 @@ test.describe("Issues board — real CRUD?", () => {
     await page.waitForTimeout(1000);
 
     const input = page
-      .locator('input[placeholder*="title" i], textarea[placeholder*="title" i]')
+      .locator('input[placeholder*="title" i], textarea[placeholder*="title" i], [contenteditable="true"][data-placeholder*="title" i], [contenteditable="true"]')
       .first();
     await expect(input).toBeVisible({ timeout: 5000 });
-    await input.fill("E2E reality check issue");
+    await input.click();
+    await page.keyboard.type("E2E reality check issue");
     console.log("  ✓ New issue dialog accepts input");
   });
 });

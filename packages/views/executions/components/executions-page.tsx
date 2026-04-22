@@ -375,7 +375,7 @@ export function ExecutionsPage() {
   const [agentName, setAgentName] = useState("");
   const [stealthEnabled, setStealthEnabled] = useState(false);
   const [activeSession, setActiveSession] = useState<ManagedSession | null>(null);
-  const [showStealthTools, setShowStealthTools] = useState(false);
+  const [showStealthTools, setShowStealthTools] = useState(true);
   const [model, setModel] = useState("anthropic/claude-sonnet-4-20250514");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
