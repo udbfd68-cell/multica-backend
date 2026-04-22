@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/internal/service"
 	"github.com/multica-ai/multica/server/internal/stream"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
@@ -609,7 +610,7 @@ func (h *Handler) CreateManagedSession(w http.ResponseWriter, r *http.Request) {
 			Payload:   payload,
 		})
 
-		if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
+		if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt, service.ExecuteOptions{}); err != nil {
 			slog.Error("failed to start session execution", "error", err, "session_id", uuidToString(session.ID))
 			h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
 				ID:     session.ID,
@@ -1032,6 +1033,9 @@ type TriggerAgentRequest struct {
 	EnvironmentID *string  `json:"environment_id,omitempty"`
 	VaultIds      []string `json:"vault_ids,omitempty"`
 	Source        string   `json:"source,omitempty"` // "manual", "webhook", "api", "schedule"
+	StealthMode   bool     `json:"stealth_mode,omitempty"`
+	ProxyURLs     []string `json:"proxy_urls,omitempty"`
+	Model         string   `json:"model,omitempty"`
 }
 
 // TriggerAgent creates a managed session and immediately executes it.
@@ -1119,7 +1123,11 @@ func (h *Handler) TriggerAgent(w http.ResponseWriter, r *http.Request) {
 		Payload:   payload,
 	})
 
-	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt); err != nil {
+	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt, service.ExecuteOptions{
+		StealthMode: req.StealthMode,
+		ProxyURLs:   req.ProxyURLs,
+		Model:       req.Model,
+	}); err != nil {
 		slog.Error("failed to execute triggered session", "error", err, "session_id", uuidToString(session.ID))
 		h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{
 			ID:     session.ID,

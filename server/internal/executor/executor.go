@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/sandbox"
+	"github.com/multica-ai/multica/server/internal/stealth"
 	"github.com/multica-ai/multica/server/internal/util"
 	"github.com/multica-ai/multica/server/pkg/agent"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
@@ -55,6 +56,10 @@ type Executor struct {
 	// McpExecute is set by the session service when MCP servers are connected.
 	// It routes MCP tool calls to the appropriate server.
 	McpExecute func(ctx context.Context, toolName string, args map[string]any) (string, error)
+	// Stealth holds anti-detection configuration for browser tools.
+	Stealth *stealth.Config
+	// ProxyPool holds rotating proxy configuration.
+	ProxyPool *stealth.ProxyPool
 }
 
 // NewExecutor creates a tool executor bound to a workspace and session.
@@ -135,6 +140,10 @@ func (e *Executor) Execute(ctx context.Context, toolName, callID string, input m
 		output, isError = e.execExtractLinks(ctx, input)
 	case "fill_form":
 		output, isError = e.execFillForm(ctx, input)
+	case "stealth_browse":
+		output, isError = e.execStealthBrowse(ctx, input)
+	case "solve_captcha":
+		output, isError = e.execSolveCaptcha(ctx, input)
 	default:
 		// Try MCP executor if available
 		if e.McpExecute != nil {
@@ -1569,6 +1578,337 @@ func (e *Executor) execFillForm(ctx context.Context, input map[string]any) (stri
 	})
 
 	return fmt.Sprintf("Form submitted to %s\nStatus: %d\n\n%s", urlStr, resp.StatusCode, respText), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: stealth_browse — Browse with anti-detection and fingerprint evasion
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execStealthBrowse(ctx context.Context, input map[string]any) (string, bool) {
+	urlStr, _ := input["url"].(string)
+	if urlStr == "" {
+		return "url is required", true
+	}
+
+	if isInternalURL(urlStr) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	action, _ := input["action"].(string)
+	if action == "" {
+		action = "get_text"
+	}
+	selector, _ := input["selector"].(string)
+	waitFor, _ := input["wait_for"].(string) // CSS selector to wait for
+	screenshot, _ := input["screenshot"].(bool)
+
+	// Build stealth config
+	cfg := stealth.DefaultConfig()
+	if e.Stealth != nil {
+		cfg = *e.Stealth
+	}
+
+	// Try proxy rotation
+	var proxyURL string
+	if e.ProxyPool != nil && e.ProxyPool.Size() > 0 {
+		proxyURL = e.ProxyPool.Next()
+		cfg.ProxyURL = proxyURL
+	}
+
+	// Try headless browser with stealth first
+	browsers := []string{"chromium-browser", "chromium", "google-chrome", "google-chrome-stable"}
+	var browserCmd string
+	for _, b := range browsers {
+		if _, err := exec.LookPath(b); err == nil {
+			browserCmd = b
+			break
+		}
+	}
+
+	if browserCmd != "" {
+		result, err := e.stealthBrowserFetch(ctx, browserCmd, urlStr, cfg, action, selector, waitFor, screenshot)
+		if err == nil {
+			eventPayload, _ := json.Marshal(map[string]string{
+				"url": urlStr, "action": action, "method": "stealth_browser",
+				"proxy": proxyURL,
+			})
+			e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+				SessionID: e.SessionID,
+				Type:      "tool.stealth_browse",
+				Payload:   eventPayload,
+			})
+			return result, false
+		}
+		e.Logger.Warn("stealth browser failed, falling back to HTTP", "error", err)
+	}
+
+	// Fallback: stealth HTTP request with realistic headers
+	return e.stealthHTTPFetch(ctx, urlStr, cfg, action, selector, proxyURL)
+}
+
+func (e *Executor) stealthBrowserFetch(ctx context.Context, browserCmd, urlStr string, cfg stealth.Config, action, selector, waitFor string, screenshot bool) (string, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
+	args := cfg.BrowserArgs()
+
+	// Write evasion script to file
+	evasionPath := filepath.Join(e.Sandbox.WorkDir(), "evasion.js")
+	os.WriteFile(evasionPath, []byte(stealth.EvasionScript()), 0600)
+
+	if screenshot {
+		outputPath := filepath.Join(e.Sandbox.WorkDir(), "stealth_screenshot.png")
+		args = append(args, "--screenshot="+outputPath)
+	}
+
+	// Build CDP script that navigates, waits, and extracts
+	scriptPath := filepath.Join(e.Sandbox.WorkDir(), "stealth_extract.js")
+	extractScript := fmt.Sprintf(`
+const puppeteer = require('puppeteer-core');
+(async () => {
+  const browser = await puppeteer.launch({
+    executablePath: '%s',
+    args: %s,
+    headless: 'new'
+  });
+  const page = await browser.newPage();
+  await page.evaluateOnNewDocument(%s);
+  await page.goto('%s', { waitUntil: 'networkidle2', timeout: 30000 });
+  %s
+  const content = await page.content();
+  console.log(JSON.stringify({ html: content, url: page.url(), title: await page.title() }));
+  await browser.close();
+})().catch(e => { console.error(e.message); process.exit(1); });
+`, browserCmd, "[]", "`"+stealth.EvasionScript()+"`", urlStr,
+		func() string {
+			if waitFor != "" {
+				return fmt.Sprintf(`await page.waitForSelector('%s', { timeout: 10000 }).catch(() => {});`, waitFor)
+			}
+			return "await new Promise(r => setTimeout(r, 2000));"
+		}())
+
+	os.WriteFile(scriptPath, []byte(extractScript), 0600)
+
+	// Try to run puppeteer script
+	if _, err := exec.LookPath("node"); err == nil {
+		cmd := exec.CommandContext(reqCtx, "node", scriptPath)
+		cmd.Dir = e.Sandbox.WorkDir()
+		out, err := cmd.CombinedOutput()
+		if err == nil && len(out) > 0 {
+			var result struct {
+				HTML  string `json:"html"`
+				URL   string `json:"url"`
+				Title string `json:"title"`
+			}
+			if json.Unmarshal(out, &result) == nil && result.HTML != "" {
+				var extracted string
+				switch action {
+				case "get_text":
+					if selector != "" {
+						extracted = extractBySelector(result.HTML, selector)
+					} else {
+						extracted = extractTextFromHTML(result.HTML)
+					}
+				case "get_links":
+					extracted = extractLinksFromHTML(result.HTML, urlStr)
+				case "get_html":
+					extracted = result.HTML
+				default:
+					extracted = extractTextFromHTML(result.HTML)
+				}
+				if len(extracted) > 80000 {
+					extracted = extracted[:80000] + "\n... (truncated)"
+				}
+				return fmt.Sprintf("[Stealth Browser]\nURL: %s\nTitle: %s\n\n%s", result.URL, result.Title, extracted), nil
+			}
+		}
+	}
+
+	// Fallback: plain headless chrome dump
+	dumpPath := filepath.Join(e.Sandbox.WorkDir(), "stealth_dump.html")
+	args = append(args, "--dump-dom", urlStr)
+	cmd := exec.CommandContext(reqCtx, browserCmd, args...)
+	cmd.Dir = e.Sandbox.WorkDir()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("headless chrome failed: %w (output: %s)", err, string(out[:min(len(out), 500)]))
+	}
+
+	os.WriteFile(dumpPath, out, 0600)
+	htmlStr := string(out)
+
+	var extracted string
+	switch action {
+	case "get_text":
+		if selector != "" {
+			extracted = extractBySelector(htmlStr, selector)
+		} else {
+			extracted = extractTextFromHTML(htmlStr)
+		}
+	case "get_links":
+		extracted = extractLinksFromHTML(htmlStr, urlStr)
+	case "get_html":
+		extracted = htmlStr
+	default:
+		extracted = extractTextFromHTML(htmlStr)
+	}
+
+	if len(extracted) > 80000 {
+		extracted = extracted[:80000] + "\n... (truncated)"
+	}
+	return fmt.Sprintf("[Stealth Browser]\nURL: %s\n\n%s", urlStr, extracted), nil
+}
+
+func (e *Executor) stealthHTTPFetch(ctx context.Context, urlStr string, cfg stealth.Config, action, selector, proxyURL string) (string, bool) {
+	reqCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return "failed to create request: " + err.Error(), true
+	}
+
+	// Apply stealth headers
+	headers := cfg.HTTPHeaders()
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	transport := &http.Transport{}
+	if proxyURL != "" {
+		if parsed, err := url.Parse(proxyURL); err == nil {
+			transport.Proxy = http.ProxyURL(parsed)
+		}
+	}
+
+	client := &http.Client{
+		Timeout:   25 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("too many redirects")
+			}
+			// Re-apply stealth headers on redirect
+			for k, v := range headers {
+				req.Header.Set(k, v)
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		if proxyURL != "" && e.ProxyPool != nil {
+			e.ProxyPool.MarkUnhealthy(proxyURL)
+		}
+		return "stealth request failed: " + err.Error(), true
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 500*1024))
+	if err != nil {
+		return "failed to read page: " + err.Error(), true
+	}
+
+	htmlStr := string(body)
+	contentType := resp.Header.Get("Content-Type")
+
+	if !strings.Contains(contentType, "html") {
+		if len(htmlStr) > 50000 {
+			htmlStr = htmlStr[:50000] + "\n... (truncated)"
+		}
+		return fmt.Sprintf("[Stealth HTTP]\nURL: %s\nStatus: %d\nContent-Type: %s\n\n%s", urlStr, resp.StatusCode, contentType, htmlStr), false
+	}
+
+	var result string
+	switch action {
+	case "get_text":
+		if selector != "" {
+			result = extractBySelector(htmlStr, selector)
+		} else {
+			result = extractTextFromHTML(htmlStr)
+		}
+	case "get_links":
+		result = extractLinksFromHTML(htmlStr, urlStr)
+	case "get_html":
+		result = htmlStr
+	default:
+		result = extractTextFromHTML(htmlStr)
+	}
+
+	if len(result) > 80000 {
+		result = result[:80000] + "\n... (truncated)"
+	}
+
+	eventPayload, _ := json.Marshal(map[string]string{
+		"url": urlStr, "action": action, "status": strconv.Itoa(resp.StatusCode),
+		"method": "stealth_http", "proxy": proxyURL,
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.stealth_browse",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("[Stealth HTTP]\nURL: %s\nStatus: %d\nFinal URL: %s\n\n%s", urlStr, resp.StatusCode, resp.Request.URL.String(), result), false
+}
+
+// ---------------------------------------------------------------------------
+// Tool: solve_captcha — Solve CAPTCHA challenges via external service
+// ---------------------------------------------------------------------------
+
+func (e *Executor) execSolveCaptcha(ctx context.Context, input map[string]any) (string, bool) {
+	captchaType, _ := input["type"].(string)
+	siteKey, _ := input["site_key"].(string)
+	pageURL, _ := input["page_url"].(string)
+
+	if siteKey == "" || pageURL == "" {
+		return "site_key and page_url are required", true
+	}
+
+	if isInternalURL(pageURL) {
+		return "access to internal network addresses is blocked", true
+	}
+
+	// Get CAPTCHA solver API key from environment
+	apiKey := os.Getenv("CAPTCHA_SOLVER_API_KEY")
+	service := os.Getenv("CAPTCHA_SOLVER_SERVICE")
+	if apiKey == "" {
+		return "CAPTCHA solver not configured. Set CAPTCHA_SOLVER_API_KEY and CAPTCHA_SOLVER_SERVICE environment variables.", true
+	}
+	if service == "" {
+		service = "2captcha"
+	}
+
+	solver := stealth.NewCaptchaSolver(service, apiKey)
+
+	var result *stealth.CaptchaResult
+	var err error
+
+	switch captchaType {
+	case "recaptcha_v2", "recaptcha", "":
+		result, err = solver.SolveRecaptchaV2(ctx, siteKey, pageURL)
+	case "hcaptcha":
+		result, err = solver.SolveHCaptcha(ctx, siteKey, pageURL)
+	default:
+		return fmt.Sprintf("unsupported captcha type: %s (supported: recaptcha_v2, hcaptcha)", captchaType), true
+	}
+
+	if err != nil {
+		return "captcha solving failed: " + err.Error(), true
+	}
+
+	eventPayload, _ := json.Marshal(map[string]string{
+		"type": captchaType, "page_url": pageURL,
+		"elapsed": result.Elapsed.String(), "cost": result.Cost,
+	})
+	e.Queries.CreateSessionEvent(ctx, db.CreateSessionEventParams{
+		SessionID: e.SessionID,
+		Type:      "tool.captcha_solved",
+		Payload:   eventPayload,
+	})
+
+	return fmt.Sprintf("CAPTCHA solved successfully!\nType: %s\nToken: %s\nTime: %s\n\nInject this token into the page's g-recaptcha-response field or use it in the form submission.", captchaType, result.Token, result.Elapsed.String()), false
 }
 
 // ===========================================================================

@@ -977,6 +977,34 @@ func AllTools() []anthropicTool {
 				"required": []string{"url", "fields"},
 			},
 		},
+		{
+			Name:        "stealth_browse",
+			Description: "Browse a web page with anti-detection and fingerprint evasion. Uses randomized user agents, realistic browser headers, proxy rotation, and bot-detection bypass. Preferred over browse_page when accessing sites with anti-bot protection (LinkedIn, social media, e-commerce).",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url":        map[string]any{"type": "string", "description": "The URL to browse with stealth mode"},
+					"action":     map[string]any{"type": "string", "enum": []string{"get_text", "get_links", "get_html"}, "description": "What to extract (default: get_text)"},
+					"selector":   map[string]any{"type": "string", "description": "CSS selector to extract specific content"},
+					"wait_for":   map[string]any{"type": "string", "description": "CSS selector to wait for before extracting (for JS-rendered pages)"},
+					"screenshot": map[string]any{"type": "boolean", "description": "Also capture a screenshot of the page"},
+				},
+				"required": []string{"url"},
+			},
+		},
+		{
+			Name:        "solve_captcha",
+			Description: "Solve a CAPTCHA challenge on a web page. Supports reCAPTCHA v2 and hCaptcha. Returns a token that can be injected into the page or submitted with a form. Requires CAPTCHA solver service configuration.",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"type":     map[string]any{"type": "string", "enum": []string{"recaptcha_v2", "hcaptcha"}, "description": "CAPTCHA type (default: recaptcha_v2)"},
+					"site_key": map[string]any{"type": "string", "description": "The site key (data-sitekey attribute from the CAPTCHA element)"},
+					"page_url": map[string]any{"type": "string", "description": "The URL of the page containing the CAPTCHA"},
+				},
+				"required": []string{"site_key", "page_url"},
+			},
+		},
 	}
 	return append(base, extra...)
 }

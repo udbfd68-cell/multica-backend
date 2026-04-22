@@ -17,6 +17,7 @@ import (
 	"github.com/multica-ai/multica/server/internal/oauth"
 	"github.com/multica-ai/multica/server/internal/realtime"
 	"github.com/multica-ai/multica/server/internal/session"
+	"github.com/multica-ai/multica/server/internal/stealth"
 	"github.com/multica-ai/multica/server/internal/stream"
 	"github.com/multica-ai/multica/server/internal/util"
 	"github.com/multica-ai/multica/server/pkg/agent"
@@ -55,6 +56,13 @@ func NewManagedSessionService(q *db.Queries, hub *realtime.Hub, bus *events.Bus)
 	}
 }
 
+// ExecuteOptions contains optional configuration for session execution.
+type ExecuteOptions struct {
+	StealthMode bool
+	ProxyURLs   []string
+	Model       string
+}
+
 // ExecuteSession launches an agentic session in a goroutine. The session runs
 // asynchronously, streaming events via SSE and WebSocket, executing tools
 // server-side, and saving all results to the database.
@@ -63,6 +71,7 @@ func (s *ManagedSessionService) ExecuteSession(
 	session db.ManagedSession,
 	agentRow db.ManagedAgent,
 	prompt string,
+	opts ...ExecuteOptions,
 ) error {
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey == "" {
@@ -85,9 +94,27 @@ func (s *ManagedSessionService) ExecuteSession(
 	})
 
 	go func() {
+		// Merge execute options
+		var opt ExecuteOptions
+		if len(opts) > 0 {
+			opt = opts[0]
+		}
+
 		// Create tool executor
 		rawExec := executor.NewExecutor(s.Queries, session.WorkspaceID, session.ID, s.Logger)
 		defer rawExec.Close() // Clean up sandbox on completion
+
+		// Apply stealth config if requested
+		if opt.StealthMode {
+			cfg := stealth.DefaultConfig()
+			rawExec.Stealth = &cfg
+			if len(opt.ProxyURLs) > 0 {
+				rawExec.ProxyPool = stealth.NewProxyPool(opt.ProxyURLs)
+			}
+			s.Logger.Info("stealth mode enabled",
+				"session_id", sessionIDStr,
+				"proxies", len(opt.ProxyURLs))
+		}
 
 		// Load MCP connectors for this agent and create MCP pool
 		var mcpPool *mcpclient.Pool

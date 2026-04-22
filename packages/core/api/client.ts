@@ -944,6 +944,9 @@ export class ApiClient {
     environment_id?: string;
     vault_ids?: string[];
     source?: string;
+    stealth_mode?: boolean;
+    proxy_urls?: string[];
+    model?: string;
   }): Promise<{ session: ManagedSession; source: string }> {
     return this.fetch(`/api/v1/agents/${agentId}/trigger`, {
       method: "POST",

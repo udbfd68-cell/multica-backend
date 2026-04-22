@@ -100,6 +100,16 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) (chi.Rout
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Health check exposed under /api/ so the Next.js proxy can forward it
+	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok","service":"multica-api"}`))
+	})
+	r.Get("/api/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok","service":"multica-api"}`))
+	})
+
 	// WebSocket
 	mc := &membershipChecker{queries: queries}
 	pr := &patResolver{queries: queries}

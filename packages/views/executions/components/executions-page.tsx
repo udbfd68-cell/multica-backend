@@ -69,7 +69,7 @@ const TEMPLATES: ExecutionTemplate[] = [
     category: "web",
     defaultPrompt:
       "Navigate to the target website, handle any anti-bot challenges, and extract the requested data. Use stealth browsing techniques.",
-    tools: ["bash", "browse_page", "screenshot_page", "extract_links", "http_request"],
+    tools: ["bash", "browse_page", "stealth_browse", "screenshot_page", "extract_links", "http_request", "solve_captcha"],
     mcpServers: ["puppeteer", "brave-search"],
     stealthMode: true,
   },
@@ -85,10 +85,12 @@ const TEMPLATES: ExecutionTemplate[] = [
     tools: [
       "bash",
       "browse_page",
+      "stealth_browse",
       "screenshot_page",
       "fill_form",
       "extract_links",
       "http_request",
+      "solve_captcha",
     ],
     mcpServers: ["puppeteer", "brave-search"],
     stealthMode: true,
@@ -136,10 +138,12 @@ const TEMPLATES: ExecutionTemplate[] = [
     tools: [
       "bash",
       "browse_page",
+      "stealth_browse",
       "fill_form",
       "screenshot_page",
       "extract_links",
       "http_request",
+      "solve_captcha",
     ],
     mcpServers: ["puppeteer"],
     stealthMode: true,
@@ -429,11 +433,13 @@ export function ExecutionsPage() {
         },
       });
 
-      // Step 2: Trigger execution with the user prompt
+      // Step 2: Trigger execution with the user prompt + stealth config
       const { session } = await api.triggerAgent(agent.id, {
         prompt: userPrompt,
         title: name || `${template.name} execution`,
         source: "manual",
+        stealth_mode: stealthEnabled,
+        model: model,
       });
 
       return session;
