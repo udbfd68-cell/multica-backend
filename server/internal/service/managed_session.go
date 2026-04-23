@@ -131,6 +131,12 @@ func (s *ManagedSessionService) ExecuteSession(
 	})
 
 	go func() {
+		// Detach from the HTTP request context: once the trigger handler
+		// returns 201, r.Context() is canceled — but the goroutine needs to
+		// keep running for the whole agentic loop. We build a fresh background
+		// context that preserves request-scoped loggers / tracing if any.
+		ctx := context.Background()
+
 		// Merge execute options
 		var opt ExecuteOptions
 		if len(opts) > 0 {
@@ -634,11 +640,18 @@ func injectDefaultMcpConfigs(existing []mcpclient.Config, execMode string) []mcp
 	}
 	// Spawn Playwright MCP over stdio with a persistent profile dir so the
 	// session can reuse cookies between tool calls.
+	args := []string{"-y", "@playwright/mcp@latest", "--headless", "--isolated"}
+	// On Linux / Alpine runtimes (Render, Docker) Playwright's bundled
+	// Chromium does not ship, so we point it at the system-installed Chromium
+	// via the executable-path flag when that env var is present.
+	if exe := os.Getenv("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"); exe != "" {
+		args = append(args, "--executable-path", exe)
+	}
 	return append(existing, mcpclient.Config{
 		Name:      "playwright",
 		Transport: "stdio",
 		Command:   "npx",
-		Args:      []string{"-y", "@playwright/mcp@latest", "--headless", "--isolated"},
+		Args:      args,
 	})
 }
 

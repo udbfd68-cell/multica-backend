@@ -66,3 +66,4 @@ railway-vars.json
 input.txt
 .envcheck
 .env.temp
+.env*.local
