@@ -80,9 +80,41 @@ func checkOrigin(r *http.Request) bool {
 		if origin == allowed {
 			return true
 		}
+		// Support wildcard subdomain patterns such as
+		// "https://*.vercel.app" or "https://multica-main-*-aurion1.vercel.app".
+		if strings.Contains(allowed, "*") && matchOriginPattern(allowed, origin) {
+			return true
+		}
 	}
 	slog.Warn("ws: rejected origin", "origin", origin)
 	return false
+}
+
+// matchOriginPattern matches an origin string against a pattern that may
+// contain "*" wildcards (matching any non-empty sequence of non-"/" chars).
+func matchOriginPattern(pattern, origin string) bool {
+	// Split on "*" and ensure each literal segment appears in order.
+	parts := strings.Split(pattern, "*")
+	idx := 0
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		found := strings.Index(origin[idx:], part)
+		if found < 0 {
+			return false
+		}
+		// First literal must match at the start.
+		if i == 0 && found != 0 {
+			return false
+		}
+		idx += found + len(part)
+	}
+	// Last literal must match at the end (if pattern doesn't end with "*").
+	if !strings.HasSuffix(pattern, "*") {
+		return strings.HasSuffix(origin, parts[len(parts)-1])
+	}
+	return true
 }
 
 const (
