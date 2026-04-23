@@ -302,18 +302,34 @@ func (c *Client) sendStdio(req jsonRPCRequest) (*jsonRPCResponse, error) {
 		return nil, fmt.Errorf("write to MCP stdin: %w", err)
 	}
 
-	// Read response line
-	line, err := c.stdout.ReadBytes('\n')
-	if err != nil {
-		return nil, fmt.Errorf("read from MCP stdout: %w", err)
+	// Read response line with a hard timeout so a hung MCP server
+	// (e.g. first-time npx download, crashed child, misbehaving
+	// server that never answers) cannot block the session loop
+	// indefinitely. 45s is generous for initialize on a cold start
+	// and plenty for tools/call on a warm connection.
+	type readResult struct {
+		line []byte
+		err  error
 	}
+	ch := make(chan readResult, 1)
+	go func() {
+		line, err := c.stdout.ReadBytes('\n')
+		ch <- readResult{line: line, err: err}
+	}()
 
-	var resp jsonRPCResponse
-	if err := json.Unmarshal(line, &resp); err != nil {
-		return nil, fmt.Errorf("parse MCP response: %w", err)
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			return nil, fmt.Errorf("read from MCP stdout: %w", r.err)
+		}
+		var resp jsonRPCResponse
+		if err := json.Unmarshal(r.line, &resp); err != nil {
+			return nil, fmt.Errorf("parse MCP response: %w", err)
+		}
+		return &resp, nil
+	case <-time.After(45 * time.Second):
+		return nil, fmt.Errorf("MCP stdio read timeout after 45s (server=%s method=%s)", c.name, req.Method)
 	}
-
-	return &resp, nil
 }
 
 func (c *Client) sendHTTP(ctx context.Context, req jsonRPCRequest) (*jsonRPCResponse, error) {

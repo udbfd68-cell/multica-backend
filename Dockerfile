@@ -36,7 +36,10 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     CHROME_BIN=/usr/bin/chromium
-RUN npm install -g @playwright/mcp@latest 2>/dev/null || true
+# Do NOT swallow install failures — if @playwright/mcp can't install, the
+# browser-mode agents will silently fall back to text-only, which is the
+# opposite of what we want. Fail the build instead.
+RUN npm install -g @playwright/mcp@latest && which playwright-mcp
 
 WORKDIR /app
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -641,6 +642,15 @@ func injectDefaultMcpConfigs(existing []mcpclient.Config, execMode string) []mcp
 	// Spawn Playwright MCP over stdio with a persistent profile dir so the
 	// session can reuse cookies between tool calls.
 	args := []string{"-y", "@playwright/mcp@latest", "--headless", "--isolated"}
+	command := "npx"
+	// Prefer the pre-installed global binary when present (Dockerfile installs
+	// @playwright/mcp globally so we avoid npx's network round-trip on every
+	// cold start). Falls back to npx on local dev where the binary may be
+	// missing.
+	if path, err := exec.LookPath("playwright-mcp"); err == nil && path != "" {
+		command = path
+		args = []string{"--headless", "--isolated"}
+	}
 	// On Linux / Alpine runtimes (Render, Docker) Playwright's bundled
 	// Chromium does not ship, so we point it at the system-installed Chromium
 	// via the executable-path flag when that env var is present.
@@ -650,7 +660,7 @@ func injectDefaultMcpConfigs(existing []mcpclient.Config, execMode string) []mcp
 	return append(existing, mcpclient.Config{
 		Name:      "playwright",
 		Transport: "stdio",
-		Command:   "npx",
+		Command:   command,
 		Args:      args,
 	})
 }
