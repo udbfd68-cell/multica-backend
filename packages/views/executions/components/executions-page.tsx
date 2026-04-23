@@ -281,6 +281,30 @@ export function ExecutionsPage() {
       const cfg = analyzeDescription(desc);
       const titleLine = desc.split("\n")[0]!.slice(0, 80);
 
+      // Claude Managed Agents parity: every workspace gets a default
+      // persistent memory store, auto-created on first launch and reused
+      // for every subsequent agent. Mirrors `memory_stores` + `resources[]`
+      // pattern from platform.claude.com/docs/managed-agents/memory.
+      let memoryStoreId: string | null = null;
+      try {
+        const { data: stores } = await api.listMemoryStores();
+        const existing = stores.find(
+          (s) => s.name === "Workspace Default Memory" && !s.archived_at
+        );
+        if (existing) {
+          memoryStoreId = existing.id;
+        } else {
+          const created = await api.createMemoryStore({
+            name: "Workspace Default Memory",
+            description:
+              "Persistent cross-session memory for this workspace. Agents read learnings before starting and write durable insights when finished.",
+          });
+          memoryStoreId = created.id;
+        }
+      } catch (e) {
+        console.warn("[memory] auto-provision failed:", e);
+      }
+
       const systemPrompt = [
         "You are an autonomous AI agent running on the Aurion platform.",
         "Execute the user's task completely and autonomously without asking for confirmation.",
@@ -289,9 +313,14 @@ export function ExecutionsPage() {
         "",
         `Execution mode: ${cfg.mode}`,
         `Auto-selected MCP servers: ${cfg.mcpServers.join(", ") || "none (built-in tools only)"}`,
+        memoryStoreId
+          ? `Persistent memory store attached: ${memoryStoreId}. Use memory_list/memory_search/memory_read before starting; memory_write durable learnings when done.`
+          : "",
         "",
         "When the task is complete, provide a clear summary of what was done and what was found.",
-      ].join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
 
       const agent = await api.createManagedAgent({
         name: `Chat: ${titleLine}`,
@@ -304,6 +333,7 @@ export function ExecutionsPage() {
           auto_mcp_servers: cfg.mcpServers,
           auto_reasoning: cfg.reasoning,
           execution_mode: cfg.mode,
+          memory_store_ids: memoryStoreId ? [memoryStoreId] : [],
         },
       });
 
@@ -500,6 +530,11 @@ export function ExecutionsPage() {
                       )}
                     </div>
                   </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-foreground/70 pt-1 border-t border-foreground/10">
+                  <Brain className="h-3 w-3" />
+                  Persistent memory: <span className="font-medium">Workspace Default</span>
+                  <span className="text-foreground/40">— learnings persist across sessions</span>
                 </div>
                 <div className="text-[11px] text-foreground/60">{auto.reasoning}</div>
               </div>
