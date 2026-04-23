@@ -80,19 +80,139 @@ function analyzeDescription(desc: string): AutoConfig {
     modelLabel = "Claude Sonnet 4.5 (fast)";
   }
 
+  // ── MCP auto-selection ──────────────────────────────────────────────────
+  // Each rule maps a keyword regex → catalog slug. All slugs below exist in
+  // server/internal/mcp/catalog.go. Keep alphabetized within each section.
   const mcps: string[] = [];
-  if (mode === "browser" || mode === "hybrid") mcps.push("playwright");
-  if (/\b(github|repo|pull request|pr|issue|commit)\b/.test(text)) mcps.push("github");
-  if (/\b(slack|channel|#\w+)\b/.test(text)) mcps.push("slack");
-  if (/\b(notion|page|database)\b/.test(text)) mcps.push("notion");
-  if (/\b(postgres|postgresql|pg)\b/.test(text)) mcps.push("postgres");
-  if (/\b(linear|ticket)\b/.test(text)) mcps.push("linear");
-  if (/\b(search|look up|find)\b/.test(text) && !mcps.includes("brave-search")) {
-    mcps.push("brave-search");
-  }
-  if (/\b(scrape|extract|fetch)\b/.test(text) && !mcps.includes("firecrawl")) {
-    mcps.push("firecrawl");
-  }
+  const add = (slug: string) => {
+    if (!mcps.includes(slug)) mcps.push(slug);
+  };
+
+  // Browser automation (default for web/hybrid modes)
+  if (mode === "browser" || mode === "hybrid") add("playwright");
+  if (/\b(headed|visible browser|with cookies|my account|my gmail|my drive|logged in)\b/.test(text)) add("playwright-headed");
+  if (/\b(puppeteer|headless chrome)\b/.test(text)) add("puppeteer");
+  if (/\b(devtools|inspect|network tab|console log|debug browser)\b/.test(text)) add("chrome-devtools");
+
+  // Version control & code hosting
+  if (/\b(github|repo|repository|pull request|\bpr\b|merge|issue|commit|branch)\b/.test(text)) add("github");
+  if (/\b(gitlab|merge request|\bmr\b)\b/.test(text)) add("gitlab");
+  if (/\b(azure devops|ado pipeline|work item)\b/.test(text)) add("azure-devops");
+  if (/\b(git log|git diff|git clone|local repo)\b/.test(text)) add("git");
+  if (/\b(linear|ticket|cycle)\b/.test(text)) add("linear");
+  if (/\b(jira|sprint|epic|backlog)\b/.test(text)) add("jira");
+  if (/\b(shortcut|story|iteration)\b/.test(text)) add("shortcut");
+
+  // Databases
+  if (/\b(postgres|postgresql|\bpg\b|psql)\b/.test(text)) add("postgres");
+  if (/\b(mysql|mariadb)\b/.test(text)) add("mysql");
+  if (/\b(sqlite|\.db\b|embedded db)\b/.test(text)) add("sqlite");
+  if (/\b(mongo|mongodb|document db)\b/.test(text)) add("mongodb");
+  if (/\b(redis|cache|key[- ]value)\b/.test(text)) add("redis");
+  if (/\b(supabase|edge function)\b/.test(text)) add("supabase");
+  if (/\b(neon)\b/.test(text)) add("neon");
+  if (/\b(qdrant|vector|embedding|semantic search)\b/.test(text)) add("qdrant");
+
+  // Communication
+  if (/\b(slack|channel|#\w+)\b/.test(text)) add("slack");
+  if (/\b(discord|guild|voice channel)\b/.test(text)) add("discord");
+  if (/\b(telegram|tg bot)\b/.test(text)) add("telegram");
+  if (/\b(whatsapp|wa message)\b/.test(text)) add("whatsapp");
+  if (/\b(twitter|\bx\.com|tweet|\bpost on x\b)\b/.test(text)) add("twitter");
+  if (/\b(notion|wiki|knowledge base)\b/.test(text)) add("notion");
+  if (/\b(gmail|send email|inbox|outlook|mail merge)\b/.test(text)) add("gmail");
+
+  // Google Workspace all-in-one (Drive, Docs, Sheets, Calendar, Forms)
+  if (/\b(google drive|\bgdrive\b|google docs?|google sheets?|google calendar|google form|spreadsheet|calendar event|meeting)\b/.test(text)) add("google-workspace");
+
+  // Search / research / scraping
+  if (/\b(search|look up|find info|\bgoogle\b|duckduckgo|bing)\b/.test(text)) add("brave-search");
+  if (/\b(research|deep research|study|investigate|literature)\b/.test(text)) add("tavily");
+  if (/\b(semantic search|neural search|\bexa\b)\b/.test(text)) add("exa");
+  if (/\b(scrape|crawl|extract|firecrawl)\b/.test(text)) add("firecrawl");
+  if (/\b(apify|mass scrape|actor)\b/.test(text)) add("apify");
+  if (/\b(fetch url|download page|web page|html)\b/.test(text)) add("fetch");
+  if (/\b(maps?|directions|geocode|place|address)\b/.test(text)) add("google-maps");
+  if (/\b(mapbox|tile)\b/.test(text)) add("mapbox");
+
+  // Sandbox / code execution
+  if (/\b(sandbox|run code|execute|python script|shell command)\b/.test(text)) add("e2b");
+  if (/\b(docker|container|image)\b/.test(text)) add("docker");
+
+  // Cloud & DevOps
+  if (/\b(aws|s3|lambda|ec2|cloudformation|dynamodb)\b/.test(text)) add("aws");
+  if (/\b(azure|microsoft cloud|\bakv\b)\b/.test(text)) add("azure");
+  if (/\b(cloudflare|workers?|\bkv\b|\br2\b|\bd1\b)\b/.test(text)) add("cloudflare");
+  if (/\b(vercel|deploy frontend)\b/.test(text)) add("vercel");
+  if (/\b(railway|rails app deploy)\b/.test(text)) add("railway");
+  if (/\b(heroku|dyno)\b/.test(text)) add("heroku");
+  if (/\b(kubernetes|\bk8s\b|kubectl|helm)\b/.test(text)) add("kubernetes");
+  if (/\b(terraform|\bhcl\b|\biac\b)\b/.test(text)) add("terraform");
+  if (/\b(pulumi)\b/.test(text)) add("pulumi");
+  if (/\b(circleci|circle ci)\b/.test(text)) add("circleci");
+
+  // Monitoring / observability
+  if (/\b(sentry|error tracking|stacktrace)\b/.test(text)) add("sentry");
+  if (/\b(datadog|\bddog\b|apm)\b/.test(text)) add("datadog");
+  if (/\b(grafana|dashboard|metrics)\b/.test(text)) add("grafana");
+
+  // Productivity / project management
+  if (/\b(asana)\b/.test(text)) add("asana");
+  if (/\b(todoist|todo list)\b/.test(text)) add("todoist");
+  if (/\b(clickup)\b/.test(text)) add("clickup");
+  if (/\b(figma|design file)\b/.test(text)) add("figma");
+
+  // CRM / business
+  if (/\b(salesforce|\bsfdc\b|soql)\b/.test(text)) add("salesforce");
+  if (/\b(hubspot|crm contact|deal pipeline)\b/.test(text)) add("hubspot");
+  if (/\b(stripe|payment|subscription|invoice|checkout)\b/.test(text)) add("stripe");
+
+  // Utilities / local / files
+  if (/\b(file|filesystem|read file|write file|folder|directory)\b/.test(text)) add("filesystem");
+  if (/\b(time|timezone|convert date|schedule for)\b/.test(text)) add("time");
+  if (/\b(translate|translation|deepl|french|english|spanish|japanese|chinese)\b/.test(text)) add("deepl");
+
+  // Automation
+  if (/\b(n8n|workflow automation|trigger webhook)\b/.test(text)) add("n8n");
+
+  // Memory / knowledge / reasoning
+  if (/\b(remember|persistent memory|knowledge graph)\b/.test(text)) add("memory");
+  if (/\b(library docs?|api reference|\bnpm package\b|how to use)\b/.test(text)) add("context7");
+  if (isComplex || /\b(step by step|reasoning|plan carefully|think through)\b/.test(text)) add("sequential-thinking");
+
+  // UI / design generation
+  if (/\b(ui component|react component|shadcn|magic ui)\b/.test(text)) add("21st-dev");
+  if (/\b(storybook|story file)\b/.test(text)) add("storybook");
+  if (/\b(eslint|lint)\b/.test(text)) add("eslint");
+
+  // New verified GitHub MCPs (catalog ≥ 2026-04-23)
+  if (/\b(perplexity|cited answer)\b/.test(text)) add("perplexity");
+  if (/\b(youtube transcript|video transcript|caption)\b/.test(text)) add("youtube-transcript");
+  if (/\b(youtube video|yt channel|playlist)\b/.test(text)) add("youtube-data");
+  if (/\b(airtable|base|\brecord\b)\b/.test(text)) add("airtable");
+  if (/\b(obsidian|vault|\.md note)\b/.test(text)) add("obsidian");
+  if (/\b(shopify|ecommerce|product listing)\b/.test(text)) add("shopify");
+  if (/\b(sendgrid)\b/.test(text)) add("sendgrid");
+  if (/\b(resend)\b/.test(text)) add("resend");
+  if (/\b(twilio|\bsms\b|text message|phone call)\b/.test(text)) add("twilio");
+  if (/\b(intercom)\b/.test(text)) add("intercom");
+  if (/\b(zendesk|helpdesk|support ticket)\b/.test(text)) add("zendesk");
+  if (/\b(spotify|playlist|song|music)\b/.test(text)) add("spotify");
+  if (/\b(reddit|subreddit|\br\/)\b/.test(text)) add("reddit");
+  if (/\b(elasticsearch|elastic|\belk\b)\b/.test(text)) add("elasticsearch");
+  if (/\b(clickhouse|olap)\b/.test(text)) add("clickhouse");
+  if (/\b(bigquery|big query|gcp data)\b/.test(text)) add("bigquery");
+  if (/\b(snowflake)\b/.test(text)) add("snowflake");
+  if (/\b(pagerduty|on[- ]call|incident)\b/.test(text)) add("pagerduty");
+  if (/\b(opensearch)\b/.test(text)) add("opensearch");
+  if (/\b(arxiv|paper|academic|preprint)\b/.test(text)) add("arxiv");
+  if (/\b(wikipedia|wiki article)\b/.test(text)) add("wikipedia");
+  if (/\b(hacker news|\bhn\b|ycombinator)\b/.test(text)) add("hackernews");
+  if (/\b(trello|kanban board)\b/.test(text)) add("trello");
+  if (/\b(jupyter|\.ipynb|notebook)\b/.test(text)) add("jupyter");
+  if (/\b(excel|xlsx|spreadsheet)\b/.test(text)) add("excel");
+  if (/\b(pdf|\.pdf\b)\b/.test(text)) add("pdf");
+  if (/\b(calendly|book meeting|schedule call)\b/.test(text)) add("calendly");
 
   const reasons: string[] = [];
   if (isWeb) reasons.push("detected web browsing needs");
@@ -535,6 +655,9 @@ export function ExecutionsPage() {
       // 6. MCP auto-attach (registry lookup).
       if (cfg.mcpServers.length > 0) {
         try {
+          // Ensure every built-in catalog entry is materialized in the
+          // workspace registry (idempotent, no-op if already seeded).
+          try { await api.seedAllMcpRegistry(); } catch { /* non-fatal */ }
           const { data: registry } = await api.listMcpRegistry();
           const byKey: Record<string, { id: string }> = {};
           for (const entry of registry as Array<{
