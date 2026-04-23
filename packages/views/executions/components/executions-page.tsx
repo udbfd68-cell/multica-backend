@@ -528,14 +528,9 @@ export function ExecutionsPage() {
         },
       });
 
-      // Attach workspace skills (best-effort).
-      if (workspaceSkillIds.length > 0) {
-        try {
-          await api.setAgentSkills(agent.id, { skill_ids: workspaceSkillIds });
-        } catch (e) {
-          console.warn("[skills] attach failed:", e);
-        }
-      }
+      // Skills are referenced in the system prompt (setAgentSkills targets the
+      // legacy /api/agents endpoint, not /api/v1/agents — so we skip the attach
+      // call and rely on metadata.skill_ids + system prompt mention).
 
       // 6. MCP auto-attach (registry lookup).
       if (cfg.mcpServers.length > 0) {
@@ -575,27 +570,9 @@ export function ExecutionsPage() {
         vault_ids: defaultVaultId ? [defaultVaultId] : undefined,
       });
 
-      // 7. OUTCOME (research preview): send user.define_outcome so the backend
-      //    evaluator iterates until the rubric is satisfied or max_iterations
-      //    is reached. See docs/managed-agents/define-outcomes.
-      if (outcomeEnabled && outcomeRubric.trim() && session?.id) {
-        try {
-          await api.sendSessionEvents(session.id, {
-            events: [
-              {
-                type: "user.define_outcome",
-                content: {
-                  description: titleLine,
-                  rubric: outcomeRubric.trim(),
-                  max_iterations: maxIterations,
-                },
-              },
-            ],
-          });
-        } catch (e) {
-          console.warn("[outcome] define failed:", e);
-        }
-      }
+      // Outcome rubric is injected into the system prompt via outcomeHint —
+      // the backend's SendSessionEvents does not yet accept user.define_outcome,
+      // so prompt-based iteration is our current fallback.
 
       return session;
     },
