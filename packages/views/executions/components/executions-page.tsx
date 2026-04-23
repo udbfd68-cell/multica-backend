@@ -58,6 +58,13 @@ interface ExecutionTemplate {
   tools: string[];
   mcpServers: string[];
   stealthMode: boolean;
+  /**
+   * Execution mode:
+   * - "browser" → agent drives a real Chromium via Playwright MCP (default for any web task)
+   * - "routine" → headless / direct API calls only (for repetitive / background tasks)
+   * - "hybrid"  → prefers APIs, falls back to browser
+   */
+  executionMode: "browser" | "routine" | "hybrid";
 }
 
 const TEMPLATES: ExecutionTemplate[] = [
@@ -70,8 +77,9 @@ const TEMPLATES: ExecutionTemplate[] = [
     defaultPrompt:
       "Navigate to the target website, handle any anti-bot challenges, and extract the requested data. Use stealth browsing techniques.",
     tools: ["bash", "browse_page", "stealth_browse", "screenshot_page", "extract_links", "http_request", "solve_captcha"],
-    mcpServers: ["puppeteer", "brave-search"],
+    mcpServers: ["playwright", "brave-search"],
     stealthMode: true,
+    executionMode: "browser",
   },
   {
     id: "linkedin-prospector",
@@ -92,8 +100,9 @@ const TEMPLATES: ExecutionTemplate[] = [
       "http_request",
       "solve_captcha",
     ],
-    mcpServers: ["puppeteer", "brave-search"],
+    mcpServers: ["playwright", "brave-search"],
     stealthMode: true,
+    executionMode: "browser",
   },
   {
     id: "code-generator",
@@ -106,6 +115,7 @@ const TEMPLATES: ExecutionTemplate[] = [
     tools: ["bash", "read_file", "write_file", "edit", "list_directory", "web_search"],
     mcpServers: ["github"],
     stealthMode: false,
+    executionMode: "routine",
   },
   {
     id: "research-agent",
@@ -124,8 +134,9 @@ const TEMPLATES: ExecutionTemplate[] = [
       "web_search",
       "write_file",
     ],
-    mcpServers: ["brave-search", "puppeteer"],
+    mcpServers: ["brave-search", "playwright"],
     stealthMode: false,
+    executionMode: "hybrid",
   },
   {
     id: "form-automator",
@@ -145,8 +156,9 @@ const TEMPLATES: ExecutionTemplate[] = [
       "http_request",
       "solve_captcha",
     ],
-    mcpServers: ["puppeteer"],
+    mcpServers: ["playwright"],
     stealthMode: true,
+    executionMode: "browser",
   },
   {
     id: "custom",
@@ -158,6 +170,7 @@ const TEMPLATES: ExecutionTemplate[] = [
     tools: [],
     mcpServers: [],
     stealthMode: false,
+    executionMode: "browser",
   },
 ];
 
@@ -374,6 +387,7 @@ export function ExecutionsPage() {
   const [prompt, setPrompt] = useState("");
   const [agentName, setAgentName] = useState("");
   const [stealthEnabled, setStealthEnabled] = useState(false);
+  const [executionMode, setExecutionMode] = useState<"browser" | "routine" | "hybrid">("browser");
   const [activeSession, setActiveSession] = useState<ManagedSession | null>(null);
   const [showStealthTools, setShowStealthTools] = useState(true);
   const [model, setModel] = useState("anthropic/claude-sonnet-4-20250514");
@@ -430,6 +444,7 @@ export function ExecutionsPage() {
         metadata: {
           execution_template: template.id,
           stealth_mode: stealthEnabled,
+          execution_mode: executionMode,
         },
       });
 
@@ -440,6 +455,7 @@ export function ExecutionsPage() {
         source: "manual",
         stealth_mode: stealthEnabled,
         model: model,
+        execution_mode: executionMode,
       });
 
       return session;
@@ -483,6 +499,7 @@ export function ExecutionsPage() {
     setSelectedTemplate(t);
     setPrompt(t.defaultPrompt);
     setStealthEnabled(t.stealthMode);
+    setExecutionMode(t.executionMode);
     setAgentName("");
     if (t.id === "custom") {
       setTimeout(() => textareaRef.current?.focus(), 100);
@@ -676,6 +693,37 @@ export function ExecutionsPage() {
                   onChange={(e) => setPrompt(e.target.value)}
                   className="min-h-[120px] text-sm resize-y"
                 />
+              </div>
+
+              {/* Execution Mode Selector */}
+              <div className="rounded-md border p-2.5 space-y-2">
+                <div>
+                  <p className="text-xs font-medium">Execution mode</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    How the agent interacts with the world
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {([
+                    { id: "browser", label: "Browser", hint: "Drives Chromium like a human (Playwright MCP)" },
+                    { id: "routine", label: "Routine", hint: "Headless / direct APIs — fast & cheap" },
+                    { id: "hybrid", label: "Hybrid", hint: "APIs first, browser when needed" },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setExecutionMode(m.id)}
+                      title={m.hint}
+                      className={`rounded border px-2 py-1.5 text-[11px] transition ${
+                        executionMode === m.id
+                          ? "border-primary bg-primary/10 font-medium text-primary"
+                          : "border-border hover:bg-accent"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Stealth Toggle */}

@@ -1036,6 +1036,11 @@ type TriggerAgentRequest struct {
 	StealthMode   bool     `json:"stealth_mode,omitempty"`
 	ProxyURLs     []string `json:"proxy_urls,omitempty"`
 	Model         string   `json:"model,omitempty"`
+	// ExecutionMode overrides the agent's configured mode for this run.
+	// Values: "browser" (drive Chromium), "routine" (headless / direct APIs),
+	// "hybrid" (auto). Empty falls back to the agent's metadata.execution_mode
+	// (default "browser").
+	ExecutionMode string `json:"execution_mode,omitempty"`
 }
 
 // TriggerAgent creates a managed session and immediately executes it.
@@ -1124,9 +1129,10 @@ func (h *Handler) TriggerAgent(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err := h.ManagedSessionService.ExecuteSession(r.Context(), session, agent, req.Prompt, service.ExecuteOptions{
-		StealthMode: req.StealthMode,
-		ProxyURLs:   req.ProxyURLs,
-		Model:       req.Model,
+		StealthMode:   req.StealthMode,
+		ProxyURLs:     req.ProxyURLs,
+		Model:         req.Model,
+		ExecutionMode: req.ExecutionMode,
 	}); err != nil {
 		slog.Error("failed to execute triggered session", "error", err, "session_id", uuidToString(session.ID))
 		h.Queries.UpdateManagedSessionStatus(r.Context(), db.UpdateManagedSessionStatusParams{

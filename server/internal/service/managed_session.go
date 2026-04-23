@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/crypto"
 	"github.com/multica-ai/multica/server/internal/events"
@@ -58,9 +60,44 @@ func NewManagedSessionService(q *db.Queries, hub *realtime.Hub, bus *events.Bus)
 
 // ExecuteOptions contains optional configuration for session execution.
 type ExecuteOptions struct {
-	StealthMode bool
-	ProxyURLs   []string
-	Model       string
+	StealthMode   bool
+	ProxyURLs     []string
+	Model         string
+	ExecutionMode string // "browser" | "routine" | "hybrid" (empty => read from agent metadata)
+}
+
+// Execution modes supported by managed agents.
+const (
+	ExecModeBrowser = "browser" // Real-user browser automation via Playwright MCP
+	ExecModeRoutine = "routine" // Headless / direct-API mode for repetitive tasks
+	ExecModeHybrid  = "hybrid"  // Routine by default, escalate to browser when needed
+)
+
+// resolveExecutionMode picks the execution mode: explicit opt override wins,
+// otherwise reads metadata.execution_mode from the agent, defaulting to
+// "browser" (the user-facing "real AI agent driving the browser" default).
+func resolveExecutionMode(a db.ManagedAgent, override string) string {
+	if override != "" {
+		return normalizeExecMode(override)
+	}
+	if a.Metadata != nil {
+		var meta struct {
+			ExecutionMode string `json:"execution_mode"`
+		}
+		if json.Unmarshal(a.Metadata, &meta) == nil && meta.ExecutionMode != "" {
+			return normalizeExecMode(meta.ExecutionMode)
+		}
+	}
+	return ExecModeBrowser
+}
+
+func normalizeExecMode(m string) string {
+	switch m {
+	case ExecModeBrowser, ExecModeRoutine, ExecModeHybrid:
+		return m
+	default:
+		return ExecModeBrowser
+	}
 }
 
 // ExecuteSession launches an agentic session in a goroutine. The session runs
@@ -124,6 +161,12 @@ func (s *ManagedSessionService) ExecuteSession(
 		// Also load DB-stored connectors (with OAuth credential injection)
 		dbConfigs := s.loadMcpConnectorsFromDB(ctx, agentRow.ID, session.WorkspaceID)
 		mcpConfigs = append(mcpConfigs, dbConfigs...)
+
+		// Resolve execution mode and auto-inject default MCPs ("real AI agent"
+		// experience: every browser/hybrid agent gets Playwright MCP for free
+		// so it can drive the web like a real user. Routine agents skip it.)
+		execMode := resolveExecutionMode(agentRow, opt.ExecutionMode)
+		mcpConfigs = injectDefaultMcpConfigs(mcpConfigs, execMode)
 		if len(mcpConfigs) > 0 {
 			pool, err := mcpclient.NewPool(ctx, mcpConfigs, s.Logger)
 			if err != nil {
@@ -154,7 +197,11 @@ func (s *ManagedSessionService) ExecuteSession(
 		// Build system prompt
 		systemPrompt := agentRow.SystemPrompt.String
 		if systemPrompt == "" {
-			systemPrompt = buildDefaultAgentPrompt(agentRow)
+			systemPrompt = buildDefaultAgentPrompt(agentRow, execMode)
+		} else {
+			// Append an execution-mode contract so even custom prompts benefit
+			// from the browser / routine guidance.
+			systemPrompt = systemPrompt + "\n\n" + executionModeContract(execMode)
 		}
 
 		// Build tool set from agent config — nil means use all tools
@@ -463,26 +510,136 @@ func extractModelFromAgent(a db.ManagedAgent) string {
 	return ""
 }
 
-func buildDefaultAgentPrompt(a db.ManagedAgent) string {
+func buildDefaultAgentPrompt(a db.ManagedAgent, execMode string) string {
 	desc := a.Description.String
 	if desc == "" {
 		desc = "a managed AI agent"
 	}
-	return fmt.Sprintf(`You are %s, %s.
+	base := fmt.Sprintf(`You are %s, %s.
 
-You are running as a managed agent on the Aurion platform. You have access to tools for:
-- Managing issues (create, list, update, comment)
-- File operations (read, write, list)
-- Shell command execution
-- HTTP requests
-- Memory (persistent notes)
-- Delegating tasks to other agents
+You are running as a managed agent on the Aurion platform.`, a.Name, desc)
+	return base + "\n\n" + executionModeContract(execMode)
+}
+
+// executionModeContract returns the behavioral contract added to every system
+// prompt so the model knows whether to drive the browser like a real user or
+// operate headlessly through direct APIs.
+func executionModeContract(mode string) string {
+	switch mode {
+	case ExecModeRoutine:
+		return `## Execution mode: ROUTINE
+
+This task is repetitive / programmatic. Do NOT open a browser. Use the most
+efficient path:
+
+- Direct HTTP / API calls (http_request, web_fetch) for data
+- Connected MCP servers (email, GitHub, Slack, database, etc.) for side effects
+- bash for local work; memory_read / memory_write for state between runs
+
+Available tools:
+- Managing issues (create_issue, list_issues, update_issue, add_comment)
+- File I/O (read_file, write_file, edit, list_directory)
+- Shell (bash)
+- HTTP (http_request, web_fetch, web_search)
+- Persistent memory (memory_read, memory_write)
+- MCP servers already attached to this agent
+- Sub-agent delegation (delegate_to_agent)
+
+Be direct, batch operations, and return a structured summary at the end.`
+
+	case ExecModeHybrid:
+		return `## Execution mode: HYBRID
+
+Prefer fast / API paths when possible; escalate to the browser (Playwright MCP)
+only when the target has no public API, requires a login session, or needs to
+be driven visually.
+
+Decision rule:
+1. Is there an API or MCP tool for this? Use it.
+2. Otherwise call the Playwright MCP tools (browser_navigate, browser_click,
+   browser_type, browser_snapshot, browser_evaluate, ...) — you are driving a
+   real Chromium browser exactly like a human user would.
+
+Available tools:
+- All routine tools (HTTP, files, bash, memory, issues, MCP servers)
+- Playwright MCP: browser_navigate, browser_snapshot, browser_click,
+  browser_type, browser_press_key, browser_wait_for, browser_evaluate,
+  browser_take_screenshot, browser_tab_*, browser_network_requests
+- Sub-agent delegation (delegate_to_agent)
+
+When driving the browser, always take a snapshot first to get element refs,
+then act on them. Never guess selectors.`
+
+	default: // ExecModeBrowser
+		return `## Execution mode: BROWSER (real AI agent driving Chromium)
+
+You operate the web like a real person using a real browser. You have a
+Playwright MCP session with full Chromium behind the scenes. Whenever you
+need to interact with any website — Gmail, LinkedIn, a CRM, a dashboard,
+a form — you USE THE BROWSER TOOLS, not curl.
+
+Core browser tools (from the Playwright MCP server):
+- browser_navigate(url): go to a URL
+- browser_snapshot(): return the accessibility tree with element refs — ALWAYS
+  call this before clicking or typing so you have a ref to target
+- browser_click(element, ref): click an element
+- browser_type(element, ref, text, submit?): fill an input
+- browser_press_key(key): keyboard input
+- browser_wait_for({text|textGone|time}): wait for state
+- browser_evaluate(function): run JS in the page
+- browser_take_screenshot(): visual check when needed
+- browser_tab_list / browser_tab_new / browser_tab_select / browser_tab_close
+- browser_network_requests(): inspect XHR / fetch traffic
+- browser_file_upload(paths): upload files
+- browser_handle_dialog({accept, promptText}): accept/dismiss dialogs
+
+Standard loop:
+1. browser_navigate → browser_snapshot
+2. Read the snapshot, pick the ref of the element you want
+3. browser_click / browser_type with the exact ref
+4. Re-snapshot to confirm state changed
+5. Extract data with browser_evaluate or browser_snapshot text
+
+You also have:
+- HTTP (http_request, web_fetch, web_search) for quick API calls
+- File / memory / bash / issue / MCP / delegate_to_agent tools
 
 Guidelines:
-- Be direct and actionable
-- Use tools to accomplish tasks rather than just explaining
-- Track your work through the issue system
-- Write clear, structured output`, a.Name, desc)
+- Never invent CSS selectors; always use refs from the latest snapshot
+- Prefer structured data (snapshot / evaluate) over screenshots
+- Respect rate limits and login sessions — treat the browser as the user's
+- If a task is clearly repetitive (scraping a list, sending 100 emails, polling
+  a feed), switch to direct HTTP / MCP tools mid-task to save time`
+	}
+}
+
+// injectDefaultMcpConfigs adds the zero-config MCP servers that correspond to
+// the requested execution mode. Today that means attaching Playwright MCP
+// (headless Chromium, no API keys) to every browser / hybrid agent unless the
+// user already pinned a playwright entry in their agent config.
+func injectDefaultMcpConfigs(existing []mcpclient.Config, execMode string) []mcpclient.Config {
+	if execMode == ExecModeRoutine {
+		return existing
+	}
+	hasPlaywright := false
+	for _, c := range existing {
+		lc := strings.ToLower(c.Name)
+		if strings.Contains(lc, "playwright") {
+			hasPlaywright = true
+			break
+		}
+	}
+	if hasPlaywright {
+		return existing
+	}
+	// Spawn Playwright MCP over stdio with a persistent profile dir so the
+	// session can reuse cookies between tool calls.
+	return append(existing, mcpclient.Config{
+		Name:      "playwright",
+		Transport: "stdio",
+		Command:   "npx",
+		Args:      []string{"-y", "@playwright/mcp@latest", "--headless", "--isolated"},
+	})
 }
 
 func formatMessageContent(msg agent.Message) string {

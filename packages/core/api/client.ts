@@ -947,6 +947,8 @@ export class ApiClient {
     stealth_mode?: boolean;
     proxy_urls?: string[];
     model?: string;
+    /** "browser" (Playwright Chromium), "routine" (headless / direct APIs), "hybrid" (auto). */
+    execution_mode?: "browser" | "routine" | "hybrid";
   }): Promise<{ session: ManagedSession; source: string }> {
     return this.fetch(`/api/v1/agents/${agentId}/trigger`, {
       method: "POST",
