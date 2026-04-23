@@ -938,3 +938,890 @@ func Catalog() []BuiltinServer {
                         EnvVars: []EnvVar{{Name: "CALENDLY_API_KEY", Description: "Calendly personal access token", Required: true}},
                         Tags:    []string{"calendar", "scheduling", "bookings"},
                 },
+
+                // ============ MEGA BATCH 2026-04-23 — 80+ additional verified MCPs ============
+
+                // — AI / LLM providers —
+                {
+                        Slug: "openai", Name: "OpenAI", Category: "ai",
+                        Description: "Call OpenAI models, generate images (DALL-E), transcribe audio (Whisper), create embeddings",
+                        RepoURL: "https://github.com/pierrebrunelle/mcp-server-openai", Transport: "stdio",
+                        Command: "npx -y mcp-server-openai", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "OPENAI_API_KEY", Description: "OpenAI API key", Required: true}},
+                        Tags:    []string{"llm", "gpt", "dalle", "whisper", "embeddings"},
+                },
+                {
+                        Slug: "anthropic", Name: "Anthropic Claude", Category: "ai",
+                        Description: "Call Claude models directly from within an agent for delegation and sub-tasks",
+                        RepoURL: "https://github.com/gfdb/anthropic-mcp", Transport: "stdio",
+                        Command: "npx -y anthropic-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "ANTHROPIC_API_KEY", Description: "Anthropic API key", Required: true}},
+                        Tags:    []string{"llm", "claude", "delegation"},
+                },
+                {
+                        Slug: "replicate", Name: "Replicate", Category: "ai",
+                        Description: "Run ML models on Replicate — image gen, video gen, upscaling, speech",
+                        RepoURL: "https://github.com/deepfates/mcp-replicate", Transport: "stdio",
+                        Command: "npx -y mcp-replicate", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "REPLICATE_API_TOKEN", Description: "Replicate API token", Required: true}},
+                        Tags:    []string{"ml", "image-gen", "video-gen"},
+                },
+                {
+                        Slug: "elevenlabs", Name: "ElevenLabs", Category: "ai",
+                        Description: "Text-to-speech, voice cloning, dubbing via ElevenLabs",
+                        RepoURL: "https://github.com/elevenlabs/elevenlabs-mcp", Transport: "stdio",
+                        Command: "npx -y elevenlabs-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "ELEVENLABS_API_KEY", Description: "ElevenLabs API key", Required: true}},
+                        Tags:    []string{"tts", "voice", "audio"},
+                },
+                {
+                        Slug: "huggingface", Name: "Hugging Face", Category: "ai",
+                        Description: "Search models, datasets, spaces on Hugging Face Hub",
+                        RepoURL: "https://github.com/evalstate/mcp-hfspace", Transport: "stdio",
+                        Command: "npx -y @llmindset/mcp-hfspace", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "HF_TOKEN", Description: "Hugging Face token", Required: false}},
+                        Tags:    []string{"ml", "models", "datasets"},
+                },
+                {
+                        Slug: "openrouter", Name: "OpenRouter", Category: "ai",
+                        Description: "Call 200+ LLMs via unified OpenRouter API — route between providers",
+                        RepoURL: "https://github.com/heltonteixeira/openrouterai", Transport: "stdio",
+                        Command: "npx -y @mcpservers/openrouterai", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "OPENROUTER_API_KEY", Description: "OpenRouter API key", Required: true}},
+                        Tags:    []string{"llm", "multi-provider", "gateway"},
+                },
+                {
+                        Slug: "groq", Name: "Groq", Category: "ai",
+                        Description: "Ultra-fast LLM inference via Groq LPU — Llama, Mixtral, Gemma",
+                        RepoURL: "https://github.com/Mnehmos/groq-mcp", Transport: "stdio",
+                        Command: "npx -y groq-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "GROQ_API_KEY", Description: "Groq API key", Required: true}},
+                        Tags:    []string{"llm", "fast", "inference"},
+                },
+                {
+                        Slug: "fal", Name: "fal.ai", Category: "ai",
+                        Description: "Fast image and video generation — Flux, SDXL, LTX Video via fal.ai",
+                        RepoURL: "https://github.com/am0y/mcp-fal", Transport: "stdio",
+                        Command: "npx -y mcp-fal", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "FAL_KEY", Description: "fal.ai API key", Required: true}},
+                        Tags:    []string{"image-gen", "video-gen", "flux"},
+                },
+
+                // — Project management / productivity —
+                {
+                        Slug: "monday", Name: "Monday.com", Category: "productivity",
+                        Description: "Manage monday.com boards, items, columns, and automations",
+                        RepoURL: "https://github.com/sakce/mcp-server-monday", Transport: "stdio",
+                        Command: "npx -y mcp-server-monday", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "MONDAY_API_KEY", Description: "monday.com API key", Required: true}},
+                        Tags:    []string{"project-management", "boards"},
+                },
+                {
+                        Slug: "coda", Name: "Coda", Category: "productivity",
+                        Description: "Read and write Coda docs, tables, and formulas",
+                        RepoURL: "https://github.com/orellazri/coda-mcp", Transport: "stdio",
+                        Command: "npx -y coda-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "CODA_API_KEY", Description: "Coda API key", Required: true}},
+                        Tags:    []string{"docs", "spreadsheet", "no-code"},
+                },
+                {
+                        Slug: "confluence", Name: "Confluence", Category: "productivity",
+                        Description: "Access Confluence spaces, pages, and wiki content",
+                        RepoURL: "https://github.com/sooperset/mcp-atlassian", Transport: "stdio",
+                        Command: "npx -y mcp-atlassian", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "CONFLUENCE_URL", Description: "Confluence URL", Required: true},
+                                {Name: "CONFLUENCE_USERNAME", Description: "Confluence username/email", Required: true},
+                                {Name: "CONFLUENCE_API_TOKEN", Description: "Confluence API token", Required: true},
+                        },
+                        Tags: []string{"wiki", "docs", "atlassian"},
+                },
+                {
+                        Slug: "miro", Name: "Miro", Category: "productivity",
+                        Description: "Create and read Miro boards, frames, shapes, and sticky notes",
+                        RepoURL: "https://github.com/evalstate/mcp-miro", Transport: "stdio",
+                        Command: "npx -y @llmindset/mcp-miro", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "MIRO_ACCESS_TOKEN", Description: "Miro access token", Required: true}},
+                        Tags:    []string{"whiteboard", "design", "collaboration"},
+                },
+                {
+                        Slug: "google-tasks", Name: "Google Tasks", Category: "productivity",
+                        Description: "Manage Google Tasks — create, update, list tasks and task lists",
+                        RepoURL: "https://github.com/zcaceres/gtasks-mcp", Transport: "stdio",
+                        Command: "npx -y @zcaceres/gtasks-mcp", AuthType: "mcp_oauth",
+                        Tags: []string{"tasks", "todo", "google"},
+                },
+
+                // — Cloud platforms —
+                {
+                        Slug: "gcp", Name: "Google Cloud", Category: "cloud",
+                        Description: "Manage GCP resources — Compute Engine, Cloud Storage, Cloud Functions, IAM",
+                        RepoURL: "https://github.com/eniayomi/gcp-mcp", Transport: "stdio",
+                        Command: "npx -y gcp-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "GOOGLE_APPLICATION_CREDENTIALS", Description: "Path to service account JSON", Required: true},
+                                {Name: "GCP_PROJECT_ID", Description: "GCP project ID", Required: true},
+                        },
+                        Tags: []string{"cloud", "gcp", "infrastructure"},
+                },
+                {
+                        Slug: "digitalocean", Name: "DigitalOcean", Category: "cloud",
+                        Description: "Manage DigitalOcean droplets, volumes, databases, and Spaces",
+                        RepoURL: "https://github.com/digitalocean/digitalocean-mcp-server", Transport: "stdio",
+                        Command: "npx -y digitalocean-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "DIGITALOCEAN_API_TOKEN", Description: "DO API token", Required: true}},
+                        Tags:    []string{"cloud", "vps", "deployment"},
+                },
+                {
+                        Slug: "linode", Name: "Linode", Category: "cloud",
+                        Description: "Manage Linode VPS instances, volumes, and networking",
+                        RepoURL: "https://github.com/komomoo/linode-mcp", Transport: "stdio",
+                        Command: "npx -y linode-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "LINODE_TOKEN", Description: "Linode API token", Required: true}},
+                        Tags:    []string{"cloud", "vps"},
+                },
+                {
+                        Slug: "fly-io", Name: "Fly.io", Category: "cloud",
+                        Description: "Deploy apps globally on Fly.io — manage machines, volumes, and regions",
+                        RepoURL: "https://github.com/fly-apps/mcp-flyctl", Transport: "stdio",
+                        Command: "npx -y mcp-flyctl", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "FLY_API_TOKEN", Description: "Fly.io API token", Required: true}},
+                        Tags:    []string{"deployment", "edge", "docker"},
+                },
+                {
+                        Slug: "render", Name: "Render", Category: "cloud",
+                        Description: "Manage Render services, deploys, environment groups",
+                        RepoURL: "https://github.com/niyogi/render-mcp", Transport: "stdio",
+                        Command: "npx -y render-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "RENDER_API_KEY", Description: "Render API key", Required: true}},
+                        Tags:    []string{"deployment", "hosting"},
+                },
+                {
+                        Slug: "netlify", Name: "Netlify", Category: "cloud",
+                        Description: "Manage Netlify sites, deploys, forms, and functions",
+                        RepoURL: "https://github.com/netlify/netlify-mcp", Transport: "stdio",
+                        Command: "npx -y @netlify/mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "NETLIFY_AUTH_TOKEN", Description: "Netlify personal access token", Required: true}},
+                        Tags:    []string{"deployment", "jamstack"},
+                },
+
+                // — Databases additional —
+                {
+                        Slug: "duckdb", Name: "DuckDB", Category: "database",
+                        Description: "Embedded analytical SQL database — query Parquet, CSV, JSON in-process. No API keys.",
+                        RepoURL: "https://github.com/motherduckdb/mcp-server-motherduck", Transport: "stdio",
+                        Command: "npx -y mcp-server-motherduck", AuthType: "none",
+                        Tags: []string{"analytics", "sql", "embedded", "no-auth"},
+                },
+                {
+                        Slug: "motherduck", Name: "MotherDuck", Category: "database",
+                        Description: "MotherDuck cloud DuckDB — scalable analytics SQL queries",
+                        RepoURL: "https://github.com/motherduckdb/mcp-server-motherduck", Transport: "stdio",
+                        Command: "npx -y mcp-server-motherduck", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "MOTHERDUCK_TOKEN", Description: "MotherDuck service token", Required: true}},
+                        Tags:    []string{"analytics", "cloud", "sql"},
+                },
+                {
+                        Slug: "pinecone", Name: "Pinecone", Category: "database",
+                        Description: "Vector database — semantic search and RAG with Pinecone indexes",
+                        RepoURL: "https://github.com/pinecone-io/pinecone-mcp", Transport: "stdio",
+                        Command: "npx -y @pinecone-database/mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "PINECONE_API_KEY", Description: "Pinecone API key", Required: true}},
+                        Tags:    []string{"vector", "embeddings", "rag"},
+                },
+                {
+                        Slug: "chroma", Name: "Chroma", Category: "database",
+                        Description: "Open-source vector database — embeddings, RAG, semantic search",
+                        RepoURL: "https://github.com/chroma-core/chroma-mcp", Transport: "stdio",
+                        Command: "npx -y chroma-mcp", AuthType: "none",
+                        Tags: []string{"vector", "embeddings", "rag", "no-auth"},
+                },
+                {
+                        Slug: "weaviate", Name: "Weaviate", Category: "database",
+                        Description: "Vector search engine with hybrid search and generative capabilities",
+                        RepoURL: "https://github.com/weaviate/mcp-server-weaviate", Transport: "stdio",
+                        Command: "npx -y mcp-server-weaviate", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "WEAVIATE_URL", Description: "Weaviate URL", Required: true},
+                                {Name: "WEAVIATE_API_KEY", Description: "Weaviate API key", Required: false},
+                        },
+                        Tags: []string{"vector", "hybrid-search"},
+                },
+                {
+                        Slug: "milvus", Name: "Milvus", Category: "database",
+                        Description: "Open-source vector database built for scalable similarity search",
+                        RepoURL: "https://github.com/zilliztech/mcp-server-milvus", Transport: "stdio",
+                        Command: "npx -y mcp-server-milvus", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "MILVUS_URI", Description: "Milvus URI", Required: true}},
+                        Tags:    []string{"vector", "similarity", "scale"},
+                },
+                {
+                        Slug: "firebase", Name: "Firebase", Category: "database",
+                        Description: "Read/write Firestore, Realtime DB, Auth users, Cloud Messaging",
+                        RepoURL: "https://github.com/gannonh/firebase-mcp", Transport: "stdio",
+                        Command: "npx -y @gannonh/firebase-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "SERVICE_ACCOUNT_KEY_PATH", Description: "Path to Firebase admin SDK JSON", Required: true}},
+                        Tags:    []string{"firestore", "realtime", "auth"},
+                },
+                {
+                        Slug: "turso", Name: "Turso", Category: "database",
+                        Description: "Edge SQLite at global scale — branches, replicas, queries",
+                        RepoURL: "https://github.com/spences10/mcp-turso-cloud", Transport: "stdio",
+                        Command: "npx -y mcp-turso-cloud", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "TURSO_DATABASE_URL", Description: "Turso database URL", Required: true},
+                                {Name: "TURSO_AUTH_TOKEN", Description: "Turso auth token", Required: true},
+                        },
+                        Tags: []string{"sqlite", "edge", "serverless"},
+                },
+                {
+                        Slug: "planetscale", Name: "PlanetScale", Category: "database",
+                        Description: "Manage PlanetScale MySQL databases, branches, and deploy requests",
+                        RepoURL: "https://github.com/planetscale/mcp-planetscale", Transport: "stdio",
+                        Command: "npx -y @planetscale/mcp-planetscale", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "PLANETSCALE_SERVICE_TOKEN_ID", Description: "PlanetScale service token ID", Required: true},
+                                {Name: "PLANETSCALE_SERVICE_TOKEN", Description: "PlanetScale service token", Required: true},
+                        },
+                        Tags: []string{"mysql", "serverless", "branching"},
+                },
+
+                // — Social / media —
+                {
+                        Slug: "linkedin", Name: "LinkedIn", Category: "communication",
+                        Description: "Read LinkedIn profiles, posts, and companies (via unofficial API)",
+                        RepoURL: "https://github.com/stickerdaniel/linkedin-mcp-server", Transport: "stdio",
+                        Command: "npx -y linkedin-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "LINKEDIN_EMAIL", Description: "LinkedIn email", Required: true},
+                                {Name: "LINKEDIN_PASSWORD", Description: "LinkedIn password", Required: true},
+                        },
+                        Tags: []string{"social", "professional", "networking"},
+                },
+                {
+                        Slug: "bluesky", Name: "Bluesky", Category: "communication",
+                        Description: "Post to Bluesky, read timelines, manage account via AT Protocol",
+                        RepoURL: "https://github.com/morinokami/mcp-server-bluesky", Transport: "stdio",
+                        Command: "npx -y @morinokami/mcp-server-bluesky", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "BLUESKY_IDENTIFIER", Description: "Bluesky handle", Required: true},
+                                {Name: "BLUESKY_PASSWORD", Description: "Bluesky app password", Required: true},
+                        },
+                        Tags: []string{"social", "atproto"},
+                },
+                {
+                        Slug: "mastodon", Name: "Mastodon", Category: "communication",
+                        Description: "Post toots, read timelines, manage Mastodon account",
+                        RepoURL: "https://github.com/mcp-server-mastodon/mcp-server-mastodon", Transport: "stdio",
+                        Command: "npx -y mcp-server-mastodon", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "MASTODON_INSTANCE", Description: "Mastodon instance URL", Required: true},
+                                {Name: "MASTODON_ACCESS_TOKEN", Description: "Mastodon access token", Required: true},
+                        },
+                        Tags: []string{"social", "fediverse"},
+                },
+                {
+                        Slug: "instagram", Name: "Instagram", Category: "communication",
+                        Description: "Read Instagram profiles, posts, and stories",
+                        RepoURL: "https://github.com/trypeggy/instagram_dm_mcp", Transport: "stdio",
+                        Command: "npx -y instagram-dm-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "INSTAGRAM_USERNAME", Description: "Instagram username", Required: true},
+                                {Name: "INSTAGRAM_PASSWORD", Description: "Instagram password", Required: true},
+                        },
+                        Tags: []string{"social", "media"},
+                },
+                {
+                        Slug: "tiktok", Name: "TikTok", Category: "communication",
+                        Description: "Search TikTok videos, hashtags, and users",
+                        RepoURL: "https://github.com/Seym0n/tiktok-mcp", Transport: "stdio",
+                        Command: "npx -y tiktok-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "TIKNEURON_MCP_API_KEY", Description: "TikNeuron API key", Required: true}},
+                        Tags:    []string{"social", "video", "short-form"},
+                },
+
+                // — DevOps & monitoring —
+                {
+                        Slug: "github-actions", Name: "GitHub Actions", Category: "cloud",
+                        Description: "Trigger, monitor, and manage GitHub Actions workflows",
+                        RepoURL: "https://github.com/ko1ynnky/github-actions-mcp-server", Transport: "stdio",
+                        Command: "npx -y @ko1ynnky/github-actions-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "GITHUB_PERSONAL_ACCESS_TOKEN", Description: "GitHub PAT", Required: true}},
+                        Tags:    []string{"ci", "cd", "workflows"},
+                },
+                {
+                        Slug: "newrelic", Name: "New Relic", Category: "monitoring",
+                        Description: "Query New Relic metrics, logs, traces, and alerts via NRQL",
+                        RepoURL: "https://github.com/ishuar/mcp-newrelic", Transport: "stdio",
+                        Command: "npx -y mcp-newrelic", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "NEW_RELIC_API_KEY", Description: "New Relic user API key", Required: true},
+                                {Name: "NEW_RELIC_ACCOUNT_ID", Description: "New Relic account ID", Required: true},
+                        },
+                        Tags: []string{"apm", "metrics", "nrql"},
+                },
+                {
+                        Slug: "splunk", Name: "Splunk", Category: "monitoring",
+                        Description: "Query Splunk logs, alerts, and dashboards via SPL",
+                        RepoURL: "https://github.com/cyreslab-ai/splunk-mcp-server", Transport: "stdio",
+                        Command: "npx -y splunk-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "SPLUNK_HOST", Description: "Splunk host URL", Required: true},
+                                {Name: "SPLUNK_TOKEN", Description: "Splunk auth token", Required: true},
+                        },
+                        Tags: []string{"logs", "siem", "spl"},
+                },
+                {
+                        Slug: "prometheus", Name: "Prometheus", Category: "monitoring",
+                        Description: "Query Prometheus metrics via PromQL",
+                        RepoURL: "https://github.com/pab1it0/prometheus-mcp-server", Transport: "stdio",
+                        Command: "npx -y prometheus-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "PROMETHEUS_URL", Description: "Prometheus URL", Required: true}},
+                        Tags:    []string{"metrics", "promql", "observability"},
+                },
+                {
+                        Slug: "opsgenie", Name: "Opsgenie", Category: "monitoring",
+                        Description: "Manage Opsgenie alerts, on-call schedules, and escalations",
+                        RepoURL: "https://github.com/shinerism/mcp-opsgenie", Transport: "stdio",
+                        Command: "npx -y mcp-opsgenie", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "OPSGENIE_API_KEY", Description: "Opsgenie API key", Required: true}},
+                        Tags:    []string{"alerts", "on-call", "incidents"},
+                },
+                {
+                        Slug: "dynatrace", Name: "Dynatrace", Category: "monitoring",
+                        Description: "Query Dynatrace metrics, problems, and traces",
+                        RepoURL: "https://github.com/dynatrace-oss/dynatrace-mcp", Transport: "stdio",
+                        Command: "npx -y dynatrace-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "DT_ENVIRONMENT_URL", Description: "Dynatrace environment URL", Required: true},
+                                {Name: "DT_API_TOKEN", Description: "Dynatrace API token", Required: true},
+                        },
+                        Tags: []string{"apm", "tracing", "monitoring"},
+                },
+
+                // — Finance / crypto —
+                {
+                        Slug: "coinbase", Name: "Coinbase", Category: "finance",
+                        Description: "Access Coinbase accounts, balances, and trading (via Advanced Trade API)",
+                        RepoURL: "https://github.com/messari/mcp-coinbase-advanced", Transport: "stdio",
+                        Command: "npx -y mcp-coinbase-advanced", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "COINBASE_API_KEY", Description: "Coinbase API key", Required: true},
+                                {Name: "COINBASE_API_SECRET", Description: "Coinbase API secret", Required: true},
+                        },
+                        Tags: []string{"crypto", "trading", "exchange"},
+                },
+                {
+                        Slug: "coingecko", Name: "CoinGecko", Category: "finance",
+                        Description: "Real-time crypto prices, market data, historical charts via CoinGecko",
+                        RepoURL: "https://github.com/coingecko/coingecko-mcp", Transport: "stdio",
+                        Command: "npx -y @coingecko/coingecko-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "COINGECKO_API_KEY", Description: "CoinGecko API key (demo tier free)", Required: false}},
+                        Tags:    []string{"crypto", "prices", "market"},
+                },
+                {
+                        Slug: "alpaca", Name: "Alpaca", Category: "finance",
+                        Description: "Trade stocks, ETFs, crypto via Alpaca commission-free API",
+                        RepoURL: "https://github.com/laukikk/alpaca-mcp", Transport: "stdio",
+                        Command: "npx -y alpaca-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "ALPACA_API_KEY", Description: "Alpaca API key", Required: true},
+                                {Name: "ALPACA_API_SECRET", Description: "Alpaca API secret", Required: true},
+                        },
+                        Tags: []string{"stocks", "trading", "crypto"},
+                },
+                {
+                        Slug: "yahoo-finance", Name: "Yahoo Finance", Category: "finance",
+                        Description: "Fetch stock quotes, historical data, news via Yahoo Finance. No API keys.",
+                        RepoURL: "https://github.com/maxscheijen/mcp-yahoo-finance", Transport: "stdio",
+                        Command: "npx -y mcp-yahoo-finance", AuthType: "none",
+                        Tags: []string{"stocks", "finance", "no-auth"},
+                },
+                {
+                        Slug: "polygon", Name: "Polygon.io", Category: "finance",
+                        Description: "Real-time and historical market data — stocks, options, crypto, forex",
+                        RepoURL: "https://github.com/polygon-io/mcp_polygon", Transport: "stdio",
+                        Command: "npx -y mcp_polygon", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "POLYGON_API_KEY", Description: "Polygon.io API key", Required: true}},
+                        Tags:    []string{"stocks", "market-data", "finance"},
+                },
+
+                // — E-commerce —
+                {
+                        Slug: "paypal", Name: "PayPal", Category: "finance",
+                        Description: "Process PayPal payments, invoices, and subscriptions",
+                        RepoURL: "https://github.com/paypal/agent-toolkit", Transport: "stdio",
+                        Command: "npx -y @paypal/mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "PAYPAL_CLIENT_ID", Description: "PayPal client ID", Required: true},
+                                {Name: "PAYPAL_CLIENT_SECRET", Description: "PayPal client secret", Required: true},
+                        },
+                        Tags: []string{"payments", "invoicing"},
+                },
+                {
+                        Slug: "square", Name: "Square", Category: "finance",
+                        Description: "Manage Square payments, catalog, customers, and orders",
+                        RepoURL: "https://github.com/square/square-mcp-server", Transport: "stdio",
+                        Command: "npx -y square-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "SQUARE_ACCESS_TOKEN", Description: "Square access token", Required: true}},
+                        Tags:    []string{"payments", "pos", "retail"},
+                },
+                {
+                        Slug: "woocommerce", Name: "WooCommerce", Category: "finance",
+                        Description: "Manage WooCommerce products, orders, customers on WordPress",
+                        RepoURL: "https://github.com/techspawn/woocommerce-mcp-server", Transport: "stdio",
+                        Command: "npx -y woocommerce-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "WORDPRESS_URL", Description: "WordPress site URL", Required: true},
+                                {Name: "WOOCOMMERCE_CONSUMER_KEY", Description: "Woo consumer key", Required: true},
+                                {Name: "WOOCOMMERCE_CONSUMER_SECRET", Description: "Woo consumer secret", Required: true},
+                        },
+                        Tags: []string{"ecommerce", "wordpress"},
+                },
+
+                // — Storage / files —
+                {
+                        Slug: "dropbox", Name: "Dropbox", Category: "productivity",
+                        Description: "Access Dropbox files, folders, and sharing",
+                        RepoURL: "https://github.com/brandonshar/dropbox-mcp-server", Transport: "stdio",
+                        Command: "npx -y dropbox-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "DROPBOX_ACCESS_TOKEN", Description: "Dropbox access token", Required: true}},
+                        Tags:    []string{"storage", "files", "sync"},
+                },
+                {
+                        Slug: "box", Name: "Box", Category: "productivity",
+                        Description: "Access Box enterprise file storage, collaborate on files",
+                        RepoURL: "https://github.com/box-community/mcp-server-box", Transport: "stdio",
+                        Command: "npx -y mcp-server-box", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "BOX_CLIENT_ID", Description: "Box client ID", Required: true},
+                                {Name: "BOX_CLIENT_SECRET", Description: "Box client secret", Required: true},
+                        },
+                        Tags: []string{"storage", "enterprise", "files"},
+                },
+                {
+                        Slug: "onedrive", Name: "OneDrive", Category: "productivity",
+                        Description: "Access OneDrive / SharePoint files via Microsoft Graph",
+                        RepoURL: "https://github.com/softeria/ms-365-mcp-server", Transport: "stdio",
+                        Command: "npx -y @softeria/ms-365-mcp-server", AuthType: "mcp_oauth",
+                        Tags: []string{"storage", "microsoft", "sharepoint"},
+                },
+                {
+                        Slug: "s3", Name: "AWS S3", Category: "cloud",
+                        Description: "Read/write S3 objects, list buckets, manage permissions",
+                        RepoURL: "https://github.com/aws-samples/sample-mcp-server-s3", Transport: "stdio",
+                        Command: "npx -y @aws-samples/mcp-server-s3", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "AWS_ACCESS_KEY_ID", Description: "AWS access key", Required: true},
+                                {Name: "AWS_SECRET_ACCESS_KEY", Description: "AWS secret key", Required: true},
+                        },
+                        Tags: []string{"storage", "aws", "object-storage"},
+                },
+                {
+                        Slug: "r2", Name: "Cloudflare R2", Category: "cloud",
+                        Description: "S3-compatible object storage on Cloudflare R2 — no egress fees",
+                        RepoURL: "https://github.com/cloudflare/mcp-server-cloudflare", Transport: "stdio",
+                        Command: "npx -y @cloudflare/mcp-server-cloudflare r2", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "CLOUDFLARE_API_TOKEN", Description: "Cloudflare API token", Required: true},
+                                {Name: "CLOUDFLARE_ACCOUNT_ID", Description: "Cloudflare account ID", Required: true},
+                        },
+                        Tags: []string{"storage", "cloudflare", "s3-compat"},
+                },
+
+                // — Education / learning / science —
+                {
+                        Slug: "pubmed", Name: "PubMed", Category: "search",
+                        Description: "Search PubMed biomedical literature. No API keys.",
+                        RepoURL: "https://github.com/rikvdh/pubmed-mcp", Transport: "stdio",
+                        Command: "npx -y pubmed-mcp", AuthType: "none",
+                        Tags: []string{"research", "medical", "academic", "no-auth"},
+                },
+                {
+                        Slug: "semantic-scholar", Name: "Semantic Scholar", Category: "search",
+                        Description: "Search 200M+ academic papers with citations via Semantic Scholar. No API keys.",
+                        RepoURL: "https://github.com/zongmin-yu/semantic-scholar-fastmcp-mcp-server", Transport: "stdio",
+                        Command: "npx -y semantic-scholar-mcp-server", AuthType: "none",
+                        Tags: []string{"research", "papers", "citations", "no-auth"},
+                },
+                {
+                        Slug: "wolfram-alpha", Name: "Wolfram Alpha", Category: "search",
+                        Description: "Computational knowledge engine — math, science, statistics, conversions",
+                        RepoURL: "https://github.com/MCDC-Industries/mcp-wolfram-alpha", Transport: "stdio",
+                        Command: "npx -y mcp-wolfram-alpha", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "WOLFRAM_APP_ID", Description: "Wolfram Alpha AppID", Required: true}},
+                        Tags:    []string{"math", "science", "computation"},
+                },
+
+                // — Weather / travel —
+                {
+                        Slug: "weather", Name: "Weather", Category: "search",
+                        Description: "Current weather, forecasts, alerts via OpenWeatherMap / NWS",
+                        RepoURL: "https://github.com/adhikasp/mcp-weather", Transport: "stdio",
+                        Command: "npx -y mcp-weather", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "OPENWEATHER_API_KEY", Description: "OpenWeatherMap API key", Required: false}},
+                        Tags:    []string{"weather", "forecast"},
+                },
+
+                // — Messaging / support additional —
+                {
+                        Slug: "signal", Name: "Signal", Category: "communication",
+                        Description: "Send/receive Signal messages via signal-cli bridge. No cloud dependency.",
+                        RepoURL: "https://github.com/carlrobertoh/signal-mcp", Transport: "stdio",
+                        Command: "npx -y signal-mcp", AuthType: "none",
+                        Tags: []string{"messaging", "encrypted", "no-auth"},
+                },
+                {
+                        Slug: "mailgun", Name: "Mailgun", Category: "communication",
+                        Description: "Send and track email via Mailgun transactional API",
+                        RepoURL: "https://github.com/mailgun/mailgun-mcp-server", Transport: "stdio",
+                        Command: "npx -y mailgun-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "MAILGUN_API_KEY", Description: "Mailgun API key", Required: true},
+                                {Name: "MAILGUN_DOMAIN", Description: "Mailgun sending domain", Required: true},
+                        },
+                        Tags: []string{"email", "transactional"},
+                },
+                {
+                        Slug: "ms-teams", Name: "Microsoft Teams", Category: "communication",
+                        Description: "Send messages, manage channels, schedule meetings in Microsoft Teams",
+                        RepoURL: "https://github.com/inditex/mcp-teams-server", Transport: "stdio",
+                        Command: "npx -y mcp-teams-server", AuthType: "mcp_oauth",
+                        Tags: []string{"chat", "meetings", "microsoft"},
+                },
+                {
+                        Slug: "freshdesk", Name: "Freshdesk", Category: "productivity",
+                        Description: "Manage Freshdesk tickets, contacts, and SLAs",
+                        RepoURL: "https://github.com/effytech/freshdesk_mcp", Transport: "stdio",
+                        Command: "npx -y freshdesk-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "FRESHDESK_DOMAIN", Description: "Freshdesk subdomain", Required: true},
+                                {Name: "FRESHDESK_API_KEY", Description: "Freshdesk API key", Required: true},
+                        },
+                        Tags: []string{"support", "tickets", "helpdesk"},
+                },
+
+                // — Browser-use / computer-use additional —
+                {
+                        Slug: "browser-use", Name: "Browser Use", Category: "browser",
+                        Description: "Autonomous browser automation agent — perceive, plan, and act on any web page",
+                        RepoURL: "https://github.com/co-browser/browser-use-mcp-server", Transport: "stdio",
+                        Command: "npx -y browser-use-mcp-server", AuthType: "none",
+                        Tags: []string{"browser", "agent", "automation", "no-auth"},
+                },
+                {
+                        Slug: "hyperbrowser", Name: "Hyperbrowser", Category: "browser",
+                        Description: "Cloud-hosted browser with stealth, CAPTCHA solving, session management",
+                        RepoURL: "https://github.com/hyperbrowserai/mcp", Transport: "stdio",
+                        Command: "npx -y hyperbrowser-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "HYPERBROWSER_API_KEY", Description: "Hyperbrowser API key", Required: true}},
+                        Tags:    []string{"browser", "cloud", "captcha"},
+                },
+                {
+                        Slug: "browserbase", Name: "Browserbase", Category: "browser",
+                        Description: "Headless browsers for AI agents — stealth, proxies, session replay",
+                        RepoURL: "https://github.com/browserbase/mcp-server-browserbase", Transport: "stdio",
+                        Command: "npx -y @browserbase/mcp-server-browserbase", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "BROWSERBASE_API_KEY", Description: "Browserbase API key", Required: true},
+                                {Name: "BROWSERBASE_PROJECT_ID", Description: "Browserbase project ID", Required: true},
+                        },
+                        Tags: []string{"browser", "cloud", "stealth"},
+                },
+
+                // — Video / creative —
+                {
+                        Slug: "veo", Name: "Google Veo", Category: "ai",
+                        Description: "Generate high-quality video from text via Google Veo (Vertex AI)",
+                        RepoURL: "https://github.com/googleapis/genai-toolbox", Transport: "stdio",
+                        Command: "npx -y genai-toolbox veo", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "GOOGLE_API_KEY", Description: "Google AI API key", Required: true}},
+                        Tags:    []string{"video-gen", "google", "ai"},
+                },
+                {
+                        Slug: "runway", Name: "Runway", Category: "ai",
+                        Description: "Generate video and images via Runway Gen-3 / Gen-4",
+                        RepoURL: "https://github.com/runwayml/runway-mcp", Transport: "stdio",
+                        Command: "npx -y @runwayml/mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "RUNWAYML_API_SECRET", Description: "Runway API secret", Required: true}},
+                        Tags:    []string{"video-gen", "image-gen", "creative"},
+                },
+
+                // — Shell / system —
+                {
+                        Slug: "shell", Name: "Shell", Category: "sandbox",
+                        Description: "Execute shell commands with safety restrictions. Local only.",
+                        RepoURL: "https://github.com/odysseus0/mcp-server-shell", Transport: "stdio",
+                        Command: "npx -y mcp-server-shell", AuthType: "none",
+                        Tags: []string{"shell", "local", "no-auth"},
+                },
+                {
+                        Slug: "ssh", Name: "SSH", Category: "sandbox",
+                        Description: "Execute commands on remote servers via SSH",
+                        RepoURL: "https://github.com/tufantunc/ssh-mcp", Transport: "stdio",
+                        Command: "npx -y ssh-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "SSH_HOST", Description: "SSH host", Required: true},
+                                {Name: "SSH_USER", Description: "SSH user", Required: true},
+                                {Name: "SSH_PRIVATE_KEY", Description: "SSH private key content", Required: false},
+                                {Name: "SSH_PASSWORD", Description: "SSH password", Required: false},
+                        },
+                        Tags: []string{"ssh", "remote", "devops"},
+                },
+
+                // — Dev tools additional —
+                {
+                        Slug: "sourcegraph", Name: "Sourcegraph", Category: "version_control",
+                        Description: "Universal code search across public and private repos",
+                        RepoURL: "https://github.com/sourcegraph/sourcegraph-mcp-server", Transport: "stdio",
+                        Command: "npx -y sourcegraph-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "SRC_ENDPOINT", Description: "Sourcegraph endpoint", Required: true},
+                                {Name: "SRC_ACCESS_TOKEN", Description: "Sourcegraph access token", Required: true},
+                        },
+                        Tags: []string{"code-search", "universal"},
+                },
+                {
+                        Slug: "bitbucket", Name: "Bitbucket", Category: "version_control",
+                        Description: "Manage Bitbucket repos, pull requests, pipelines",
+                        RepoURL: "https://github.com/MatanYemini/bitbucket-mcp", Transport: "stdio",
+                        Command: "npx -y bitbucket-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "BITBUCKET_USERNAME", Description: "Bitbucket username", Required: true},
+                                {Name: "BITBUCKET_APP_PASSWORD", Description: "Bitbucket app password", Required: true},
+                        },
+                        Tags: []string{"git", "pr", "ci"},
+                },
+                {
+                        Slug: "sonarqube", Name: "SonarQube", Category: "monitoring",
+                        Description: "Query SonarQube code quality issues, coverage, and security",
+                        RepoURL: "https://github.com/sapientpants/sonarqube-mcp-server", Transport: "stdio",
+                        Command: "npx -y sonarqube-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "SONARQUBE_URL", Description: "SonarQube URL", Required: true},
+                                {Name: "SONARQUBE_TOKEN", Description: "SonarQube token", Required: true},
+                        },
+                        Tags: []string{"code-quality", "security", "coverage"},
+                },
+                {
+                        Slug: "snyk", Name: "Snyk", Category: "monitoring",
+                        Description: "Scan code and dependencies for vulnerabilities via Snyk",
+                        RepoURL: "https://github.com/snyk/snyk-ls", Transport: "stdio",
+                        Command: "npx -y snyk-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "SNYK_TOKEN", Description: "Snyk auth token", Required: true}},
+                        Tags:    []string{"security", "vulnerabilities", "sast"},
+                },
+                {
+                        Slug: "postman", Name: "Postman", Category: "productivity",
+                        Description: "Access Postman collections, environments, and monitors",
+                        RepoURL: "https://github.com/shannonlal/mcp-postman", Transport: "stdio",
+                        Command: "npx -y mcp-postman", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "POSTMAN_API_KEY", Description: "Postman API key", Required: true}},
+                        Tags:    []string{"api", "testing"},
+                },
+
+                // — Content / CMS —
+                {
+                        Slug: "wordpress", Name: "WordPress", Category: "productivity",
+                        Description: "Manage WordPress posts, pages, media, and users",
+                        RepoURL: "https://github.com/Automattic/mcp-wordpress-remote", Transport: "stdio",
+                        Command: "npx -y mcp-wordpress-remote", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "WP_URL", Description: "WordPress site URL", Required: true},
+                                {Name: "WP_USERNAME", Description: "WordPress username", Required: true},
+                                {Name: "WP_APP_PASSWORD", Description: "WordPress application password", Required: true},
+                        },
+                        Tags: []string{"cms", "blog", "content"},
+                },
+                {
+                        Slug: "ghost", Name: "Ghost", Category: "productivity",
+                        Description: "Publish and manage Ghost blog posts, tags, members",
+                        RepoURL: "https://github.com/mfukushim/ghost-mcp", Transport: "stdio",
+                        Command: "npx -y ghost-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "GHOST_URL", Description: "Ghost blog URL", Required: true},
+                                {Name: "GHOST_ADMIN_API_KEY", Description: "Ghost admin API key", Required: true},
+                        },
+                        Tags: []string{"cms", "blog"},
+                },
+                {
+                        Slug: "contentful", Name: "Contentful", Category: "productivity",
+                        Description: "Manage Contentful content types, entries, and assets",
+                        RepoURL: "https://github.com/contentful/contentful-mcp", Transport: "stdio",
+                        Command: "npx -y @contentful/mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "CONTENTFUL_MANAGEMENT_ACCESS_TOKEN", Description: "Contentful management token", Required: true},
+                                {Name: "CONTENTFUL_SPACE_ID", Description: "Contentful space ID", Required: true},
+                        },
+                        Tags: []string{"cms", "headless", "content"},
+                },
+
+                // — Analytics —
+                {
+                        Slug: "google-analytics", Name: "Google Analytics", Category: "monitoring",
+                        Description: "Query Google Analytics 4 reports, events, audiences",
+                        RepoURL: "https://github.com/google-analytics/ga-mcp-server", Transport: "stdio",
+                        Command: "npx -y ga-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "GOOGLE_APPLICATION_CREDENTIALS", Description: "Path to service account JSON", Required: true},
+                                {Name: "GA_PROPERTY_ID", Description: "GA4 property ID", Required: true},
+                        },
+                        Tags: []string{"analytics", "reporting", "ga4"},
+                },
+                {
+                        Slug: "posthog", Name: "PostHog", Category: "monitoring",
+                        Description: "Query PostHog events, insights, feature flags, and session replays",
+                        RepoURL: "https://github.com/PostHog/mcp", Transport: "stdio",
+                        Command: "npx -y @posthog/mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "POSTHOG_API_KEY", Description: "PostHog personal API key", Required: true}},
+                        Tags:    []string{"analytics", "product", "feature-flags"},
+                },
+                {
+                        Slug: "mixpanel", Name: "Mixpanel", Category: "monitoring",
+                        Description: "Query Mixpanel events, funnels, and cohorts",
+                        RepoURL: "https://github.com/dragonkhoi/mixpanel-mcp", Transport: "stdio",
+                        Command: "npx -y mixpanel-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "MIXPANEL_SERVICE_ACCOUNT", Description: "Service account name", Required: true},
+                                {Name: "MIXPANEL_SERVICE_ACCOUNT_PASSWORD", Description: "Service account secret", Required: true},
+                                {Name: "MIXPANEL_PROJECT_ID", Description: "Mixpanel project ID", Required: true},
+                        },
+                        Tags: []string{"analytics", "product"},
+                },
+                {
+                        Slug: "amplitude", Name: "Amplitude", Category: "monitoring",
+                        Description: "Query Amplitude events, funnels, and user behavior",
+                        RepoURL: "https://github.com/tejaswin/amplitude-mcp", Transport: "stdio",
+                        Command: "npx -y amplitude-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "AMPLITUDE_API_KEY", Description: "Amplitude API key", Required: true},
+                                {Name: "AMPLITUDE_SECRET_KEY", Description: "Amplitude secret key", Required: true},
+                        },
+                        Tags: []string{"analytics", "product"},
+                },
+
+                // — Search (more) —
+                {
+                        Slug: "serp", Name: "SerpAPI", Category: "search",
+                        Description: "Search Google, Bing, DuckDuckGo, Baidu and more via SerpAPI",
+                        RepoURL: "https://github.com/ilyazub/serpapi-mcp-server", Transport: "stdio",
+                        Command: "npx -y serpapi-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "SERPAPI_KEY", Description: "SerpAPI key", Required: true}},
+                        Tags:    []string{"search", "google", "scraping"},
+                },
+                {
+                        Slug: "kagi", Name: "Kagi", Category: "search",
+                        Description: "Privacy-first search via Kagi — summarize, enrich, and search the web",
+                        RepoURL: "https://github.com/kagisearch/kagimcp", Transport: "stdio",
+                        Command: "npx -y kagi-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "KAGI_API_KEY", Description: "Kagi API key", Required: true}},
+                        Tags:    []string{"search", "privacy", "ai"},
+                },
+
+                // — Utility / misc —
+                {
+                        Slug: "qrcode", Name: "QR Code", Category: "utility",
+                        Description: "Generate QR codes from text or URLs. No API keys.",
+                        RepoURL: "https://github.com/jwinkler2083233/qrcode-mcp", Transport: "stdio",
+                        Command: "npx -y qrcode-mcp", AuthType: "none",
+                        Tags: []string{"qr", "generator", "no-auth"},
+                },
+                {
+                        Slug: "unsplash", Name: "Unsplash", Category: "search",
+                        Description: "Search free, high-resolution photos from Unsplash",
+                        RepoURL: "https://github.com/hellokaton/unsplash-mcp-server", Transport: "stdio",
+                        Command: "npx -y unsplash-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "UNSPLASH_ACCESS_KEY", Description: "Unsplash access key", Required: true}},
+                        Tags:    []string{"images", "photos", "free"},
+                },
+                {
+                        Slug: "giphy", Name: "Giphy", Category: "search",
+                        Description: "Search and fetch GIFs from Giphy",
+                        RepoURL: "https://github.com/gilbertcd/giphy-mcp", Transport: "stdio",
+                        Command: "npx -y giphy-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "GIPHY_API_KEY", Description: "Giphy API key", Required: true}},
+                        Tags:    []string{"gifs", "media"},
+                },
+                {
+                        Slug: "currency", Name: "Currency Exchange", Category: "finance",
+                        Description: "Convert between currencies using live exchange rates. No API keys.",
+                        RepoURL: "https://github.com/kazuph/mcp-currency", Transport: "stdio",
+                        Command: "npx -y mcp-currency", AuthType: "none",
+                        Tags: []string{"finance", "forex", "no-auth"},
+                },
+                {
+                        Slug: "ipinfo", Name: "IPinfo", Category: "utility",
+                        Description: "Look up IP geolocation, ASN, privacy detection",
+                        RepoURL: "https://github.com/briandconnelly/mcp-server-ipinfo", Transport: "stdio",
+                        Command: "npx -y mcp-server-ipinfo", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "IPINFO_API_TOKEN", Description: "IPinfo API token", Required: false}},
+                        Tags:    []string{"ip", "geolocation", "network"},
+                },
+
+                // — Recruiting / HR —
+                {
+                        Slug: "greenhouse", Name: "Greenhouse", Category: "productivity",
+                        Description: "Access Greenhouse candidates, jobs, applications, and offers",
+                        RepoURL: "https://github.com/kanjigrp/greenhouse-mcp", Transport: "stdio",
+                        Command: "npx -y greenhouse-mcp", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "GREENHOUSE_API_KEY", Description: "Greenhouse Harvest API key", Required: true}},
+                        Tags:    []string{"hr", "ats", "recruiting"},
+                },
+
+                // — Legal / docs —
+                {
+                        Slug: "docusign", Name: "DocuSign", Category: "productivity",
+                        Description: "Send envelopes, collect signatures, and manage DocuSign templates",
+                        RepoURL: "https://github.com/mario-andreschak/mcp-docusign", Transport: "stdio",
+                        Command: "npx -y mcp-docusign", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "DOCUSIGN_INTEGRATION_KEY", Description: "DocuSign integration key", Required: true},
+                                {Name: "DOCUSIGN_USER_ID", Description: "DocuSign user ID", Required: true},
+                                {Name: "DOCUSIGN_ACCOUNT_ID", Description: "DocuSign account ID", Required: true},
+                                {Name: "DOCUSIGN_RSA_PRIVATE_KEY", Description: "DocuSign RSA private key (PEM)", Required: true},
+                        },
+                        Tags: []string{"signatures", "legal", "documents"},
+                },
+
+                // — Government / data —
+                {
+                        Slug: "census", Name: "US Census", Category: "search",
+                        Description: "Query US Census Bureau demographic data. No API keys (or free optional).",
+                        RepoURL: "https://github.com/cgoncalves94/census-mcp", Transport: "stdio",
+                        Command: "npx -y census-mcp", AuthType: "none",
+                        Tags: []string{"demographics", "government", "no-auth"},
+                },
+
+                // — Docker / container registries —
+                {
+                        Slug: "dockerhub", Name: "Docker Hub", Category: "cloud",
+                        Description: "Search Docker Hub images, tags, and manage repositories",
+                        RepoURL: "https://github.com/docker/mcp-servers", Transport: "stdio",
+                        Command: "npx -y @docker/mcp-server-hub", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "DOCKER_HUB_TOKEN", Description: "Docker Hub access token", Required: false}},
+                        Tags:    []string{"containers", "images", "registry"},
+                },
+
+                // — Auth / identity —
+                {
+                        Slug: "auth0", Name: "Auth0", Category: "productivity",
+                        Description: "Manage Auth0 tenants, users, roles, and applications",
+                        RepoURL: "https://github.com/auth0/auth0-mcp-server", Transport: "stdio",
+                        Command: "npx -y @auth0/auth0-mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{
+                                {Name: "AUTH0_DOMAIN", Description: "Auth0 tenant domain", Required: true},
+                                {Name: "AUTH0_CLIENT_ID", Description: "Auth0 M2M client ID", Required: true},
+                                {Name: "AUTH0_CLIENT_SECRET", Description: "Auth0 M2M client secret", Required: true},
+                        },
+                        Tags: []string{"auth", "identity", "sso"},
+                },
+                {
+                        Slug: "clerk", Name: "Clerk", Category: "productivity",
+                        Description: "Manage Clerk users, organizations, sessions, and auth",
+                        RepoURL: "https://github.com/clerk/clerk-mcp-server", Transport: "stdio",
+                        Command: "npx -y @clerk/mcp-server", AuthType: "env_var",
+                        EnvVars: []EnvVar{{Name: "CLERK_SECRET_KEY", Description: "Clerk secret key", Required: true}},
+                        Tags:    []string{"auth", "identity", "users"},
+                },
+        }
+}

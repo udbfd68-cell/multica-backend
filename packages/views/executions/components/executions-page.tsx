@@ -214,6 +214,137 @@ function analyzeDescription(desc: string): AutoConfig {
   if (/\b(pdf|\.pdf\b)\b/.test(text)) add("pdf");
   if (/\b(calendly|book meeting|schedule call)\b/.test(text)) add("calendly");
 
+  // Mega batch 2026-04-23 — 80+ additional catalog entries
+  // AI providers
+  if (/\b(openai|gpt|dalle|dall-e|whisper|embeddings)\b/.test(text)) add("openai");
+  if (/\b(sub[- ]agent|delegate to claude|claude api)\b/.test(text)) add("anthropic");
+  if (/\b(replicate|\bflux\b|sdxl)\b/.test(text)) add("replicate");
+  if (/\b(elevenlabs|text to speech|\btts\b|voice clone)\b/.test(text)) add("elevenlabs");
+  if (/\b(hugging ?face|\bhf\b|model hub)\b/.test(text)) add("huggingface");
+  if (/\b(openrouter|route llm)\b/.test(text)) add("openrouter");
+  if (/\b(groq|\blpu\b|fast inference)\b/.test(text)) add("groq");
+  if (/\b(fal\.ai|\bfal\b)\b/.test(text)) add("fal");
+  if (/\b(generate video|video generation|\bveo\b)\b/.test(text)) add("veo");
+  if (/\b(runway|gen-?3|gen-?4)\b/.test(text)) add("runway");
+
+  // PM / productivity extras
+  if (/\b(monday\.com|monday board)\b/.test(text)) add("monday");
+  if (/\b(\bcoda\b)\b/.test(text)) add("coda");
+  if (/\b(confluence|atlassian wiki)\b/.test(text)) add("confluence");
+  if (/\b(miro|whiteboard)\b/.test(text)) add("miro");
+  if (/\b(google tasks|\bgtasks\b)\b/.test(text)) add("google-tasks");
+  if (/\b(postman|api collection)\b/.test(text)) add("postman");
+
+  // Cloud extras
+  if (/\b(gcp|google cloud|\bgke\b)\b/.test(text)) add("gcp");
+  if (/\b(digitalocean|\bdroplet\b|\bdo\b cloud)\b/.test(text)) add("digitalocean");
+  if (/\b(linode)\b/.test(text)) add("linode");
+  if (/\b(fly\.io|\bflyctl\b)\b/.test(text)) add("fly-io");
+  if (/\b(render\.com|render service)\b/.test(text)) add("render");
+  if (/\b(netlify|jamstack)\b/.test(text)) add("netlify");
+  if (/\b(github action|workflow run|\bci\b pipeline)\b/.test(text)) add("github-actions");
+  if (/\b(dockerhub|docker image|registry)\b/.test(text)) add("dockerhub");
+  if (/\b(\bs3\b|s3 bucket|object storage)\b/.test(text)) add("s3");
+  if (/\b(\br2\b bucket|cloudflare r2)\b/.test(text)) add("r2");
+
+  // Databases extras
+  if (/\b(duckdb|parquet)\b/.test(text)) add("duckdb");
+  if (/\b(motherduck)\b/.test(text)) add("motherduck");
+  if (/\b(pinecone)\b/.test(text)) add("pinecone");
+  if (/\b(chroma|chromadb)\b/.test(text)) add("chroma");
+  if (/\b(weaviate)\b/.test(text)) add("weaviate");
+  if (/\b(milvus)\b/.test(text)) add("milvus");
+  if (/\b(firebase|firestore|realtime db)\b/.test(text)) add("firebase");
+  if (/\b(turso|libsql)\b/.test(text)) add("turso");
+  if (/\b(planetscale|\bplanet scale\b)\b/.test(text)) add("planetscale");
+
+  // Social extras
+  if (/\b(linkedin|professional network)\b/.test(text)) add("linkedin");
+  if (/\b(bluesky|\bbsky\b|atproto)\b/.test(text)) add("bluesky");
+  if (/\b(mastodon|fediverse|\btoot\b)\b/.test(text)) add("mastodon");
+  if (/\b(instagram|\big\b post)\b/.test(text)) add("instagram");
+  if (/\b(tiktok|short video)\b/.test(text)) add("tiktok");
+
+  // Monitoring extras
+  if (/\b(new relic|newrelic|\bnrql\b)\b/.test(text)) add("newrelic");
+  if (/\b(splunk|\bspl\b)\b/.test(text)) add("splunk");
+  if (/\b(prometheus|promql)\b/.test(text)) add("prometheus");
+  if (/\b(opsgenie)\b/.test(text)) add("opsgenie");
+  if (/\b(dynatrace)\b/.test(text)) add("dynatrace");
+  if (/\b(google analytics|\bga4\b)\b/.test(text)) add("google-analytics");
+  if (/\b(posthog|product analytics|feature flag)\b/.test(text)) add("posthog");
+  if (/\b(mixpanel|funnel)\b/.test(text)) add("mixpanel");
+  if (/\b(amplitude)\b/.test(text)) add("amplitude");
+  if (/\b(sonarqube|code quality|code smell)\b/.test(text)) add("sonarqube");
+  if (/\b(snyk|vulnerability scan|\bsca\b|\bsast\b)\b/.test(text)) add("snyk");
+
+  // Finance / crypto / commerce
+  if (/\b(coinbase)\b/.test(text)) add("coinbase");
+  if (/\b(coingecko|crypto price)\b/.test(text)) add("coingecko");
+  if (/\b(alpaca)\b/.test(text)) add("alpaca");
+  if (/\b(yahoo finance|yfinance)\b/.test(text)) add("yahoo-finance");
+  if (/\b(polygon\.io|market data)\b/.test(text)) add("polygon");
+  if (/\b(paypal)\b/.test(text)) add("paypal");
+  if (/\b(square(up)?)\b/.test(text)) add("square");
+  if (/\b(woocommerce|\bwoo\b shop)\b/.test(text)) add("woocommerce");
+  if (/\b(currency|exchange rate|forex)\b/.test(text)) add("currency");
+
+  // Storage
+  if (/\b(dropbox)\b/.test(text)) add("dropbox");
+  if (/\b(\bbox\.com|box enterprise|box file)\b/.test(text)) add("box");
+  if (/\b(onedrive|sharepoint)\b/.test(text)) add("onedrive");
+
+  // Science / research extras
+  if (/\b(pubmed|biomedical)\b/.test(text)) add("pubmed");
+  if (/\b(semantic scholar|citation graph)\b/.test(text)) add("semantic-scholar");
+  if (/\b(wolfram|math solve|compute)\b/.test(text)) add("wolfram-alpha");
+  if (/\b(weather|forecast|temperature)\b/.test(text)) add("weather");
+
+  // Comms extras
+  if (/\b(signal messenger|signal-cli)\b/.test(text)) add("signal");
+  if (/\b(mailgun)\b/.test(text)) add("mailgun");
+  if (/\b(microsoft teams|\bms teams\b)\b/.test(text)) add("ms-teams");
+  if (/\b(freshdesk)\b/.test(text)) add("freshdesk");
+
+  // Browser extras
+  if (/\b(browser[- ]use|autonomous browser)\b/.test(text)) add("browser-use");
+  if (/\b(hyperbrowser|cloud browser)\b/.test(text)) add("hyperbrowser");
+  if (/\b(browserbase)\b/.test(text)) add("browserbase");
+
+  // System / shell
+  if (/\b(shell command|bash|\bsh\b|exec command)\b/.test(text)) add("shell");
+  if (/\b(\bssh\b|remote server|sftp)\b/.test(text)) add("ssh");
+
+  // Code search extras
+  if (/\b(sourcegraph|universal code search)\b/.test(text)) add("sourcegraph");
+  if (/\b(bitbucket)\b/.test(text)) add("bitbucket");
+
+  // CMS / content
+  if (/\b(wordpress|\bwp\b blog)\b/.test(text)) add("wordpress");
+  if (/\b(ghost blog|ghost cms)\b/.test(text)) add("ghost");
+  if (/\b(contentful|headless cms)\b/.test(text)) add("contentful");
+
+  // Search extras
+  if (/\b(serpapi|scrape search|\bserp\b)\b/.test(text)) add("serp");
+  if (/\b(\bkagi\b)\b/.test(text)) add("kagi");
+
+  // Utility extras
+  if (/\b(qr code|qrcode)\b/.test(text)) add("qrcode");
+  if (/\b(unsplash|stock photo)\b/.test(text)) add("unsplash");
+  if (/\b(giphy|\bgif\b)\b/.test(text)) add("giphy");
+  if (/\b(ip address|geolocation|ipinfo)\b/.test(text)) add("ipinfo");
+
+  // HR / legal
+  if (/\b(greenhouse|\bats\b|applicant tracking)\b/.test(text)) add("greenhouse");
+  if (/\b(docusign|e[- ]signature|sign document)\b/.test(text)) add("docusign");
+
+  // Gov data
+  if (/\b(census|demographics|population)\b/.test(text)) add("census");
+
+  // Auth
+  if (/\b(auth0)\b/.test(text)) add("auth0");
+  if (/\b(clerk\.com|clerk auth)\b/.test(text)) add("clerk");
+
   const reasons: string[] = [];
   if (isWeb) reasons.push("detected web browsing needs");
   if (isCode) reasons.push("detected code tasks");
