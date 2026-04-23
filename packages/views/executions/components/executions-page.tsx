@@ -307,6 +307,37 @@ export function ExecutionsPage() {
         },
       });
 
+      // Auto-attach suggested MCP servers from the registry.
+      // We try to match registry entries by slug/name against cfg.mcpServers.
+      // Fails silently per-connector so one missing registry entry doesn't block launch.
+      if (cfg.mcpServers.length > 0) {
+        try {
+          const { data: registry } = await api.listMcpRegistry();
+          const byKey: Record<string, { id: string }> = {};
+          for (const entry of registry as Array<{
+            id: string;
+            slug?: string;
+            name?: string;
+          }>) {
+            if (entry.slug) byKey[entry.slug.toLowerCase()] = entry;
+            if (entry.name) byKey[entry.name.toLowerCase()] = entry;
+          }
+          await Promise.all(
+            cfg.mcpServers.map(async (server) => {
+              const entry = byKey[server.toLowerCase()];
+              if (!entry) return;
+              try {
+                await api.addMcpFromRegistry(agent.id, entry.id);
+              } catch (e) {
+                console.warn(`[auto-mcp] failed to attach ${server}:`, e);
+              }
+            })
+          );
+        } catch (e) {
+          console.warn("[auto-mcp] registry lookup failed:", e);
+        }
+      }
+
       const { session } = await api.triggerAgent(agent.id, {
         prompt: desc,
         title: titleLine,
