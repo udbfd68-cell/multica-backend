@@ -12,6 +12,12 @@ import {
   Globe,
   Zap,
   Brain,
+  Target,
+  ShieldCheck,
+  Users,
+  Check,
+  Ban,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@aurion/ui/components/ui/button";
 import { Textarea } from "@aurion/ui/components/ui/textarea";
@@ -109,7 +115,13 @@ function analyzeDescription(desc: string): AutoConfig {
 
 // ÔöÇÔöÇ Session Event Viewer ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
-function EventCard({ event }: { event: StoreEvent }) {
+function EventCard({
+  event,
+  onConfirm,
+}: {
+  event: StoreEvent;
+  onConfirm?: (allow: boolean, toolCallId?: string) => void;
+}) {
   const typeColors: Record<string, string> = {
     user_message: "border-l-white",
     assistant_message: "border-l-white/60",
@@ -119,27 +131,63 @@ function EventCard({ event }: { event: StoreEvent }) {
     cost_event: "border-l-white/30",
     thinking: "border-l-white/70",
   };
+
+  // Claude Managed Agents "requires_action" pattern — surfaced by the backend
+  // as a system_event named tool_confirmation, or as a tool_call flagged with
+  // requires_confirmation=true (always_ask policy or MCP toolset default).
+  const data = event.data as typeof event.data & {
+    requires_confirmation?: boolean;
+    event_name?: string;
+  };
+  const isConfirmation =
+    (event.type === "system_event" && data.event_name === "tool_confirmation") ||
+    (event.type === "tool_call" && data.requires_confirmation === true);
+
+  // Outcome evaluation spans (managed-agents-2026-04-01-research-preview).
+  const isOutcome =
+    event.type === "system_event" &&
+    (data.event_name === "outcome_evaluation_end" ||
+      data.event_name === "outcome_evaluation_ongoing" ||
+      data.event_name === "outcome_evaluation_start");
+
   return (
     <div
       className={cn(
         "border-l-2 pl-3 py-2 text-xs font-mono",
-        typeColors[event.type] ?? "border-l-white/20"
+        isConfirmation && "border-l-amber-400 bg-amber-500/5",
+        isOutcome && "border-l-emerald-400 bg-emerald-500/5",
+        !isConfirmation && !isOutcome && (typeColors[event.type] ?? "border-l-white/20"),
       )}
     >
       <div className="flex items-center gap-2 mb-1">
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-foreground border-foreground/30">
-          {event.type}
+        <Badge
+          variant="outline"
+          className="text-[10px] px-1.5 py-0 text-foreground border-foreground/30"
+        >
+          {isConfirmation ? "tool_confirmation" : isOutcome ? "outcome" : event.type}
         </Badge>
         <span className="text-foreground/60">#{event.index}</span>
       </div>
       <div className="text-foreground/80 whitespace-pre-wrap line-clamp-6">
-        {event.data.content ??
-          event.data.thinking ??
-          event.data.summary ??
-          (event.data.tool_name
-            ? `${event.data.tool_name}(${JSON.stringify(event.data.input ?? {})})`
-            : event.data.details ?? JSON.stringify(event.data, null, 2))}
+        {data.content ??
+          data.thinking ??
+          data.summary ??
+          (data.tool_name
+            ? `${data.tool_name}(${JSON.stringify(data.input ?? {})})`
+            : data.details ?? JSON.stringify(data, null, 2))}
       </div>
+      {isConfirmation && onConfirm && (
+        <div className="flex items-center gap-2 mt-2">
+          <Button size="xs" variant="default" onClick={() => onConfirm(true, data.call_id)}>
+            <Check className="h-3 w-3 mr-1" />
+            Allow
+          </Button>
+          <Button size="xs" variant="destructive" onClick={() => onConfirm(false, data.call_id)}>
+            <Ban className="h-3 w-3 mr-1" />
+            Deny
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -185,6 +233,28 @@ function SessionPanel({
   }, [events.length]);
 
   const isRunning = session.status === "running";
+
+  const handleConfirm = useCallback(
+    async (allow: boolean, toolCallId?: string) => {
+      try {
+        await api.sendSessionEvents(session.id, {
+          events: [
+            {
+              type: "user.tool_confirmation",
+              content: {
+                decision: allow ? "allow" : "deny",
+                tool_call_id: toolCallId,
+              },
+            },
+          ],
+        });
+        toast.success(allow ? "Tool allowed" : "Tool denied");
+      } catch {
+        toast.error("Failed to send confirmation");
+      }
+    },
+    [session.id],
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -233,7 +303,7 @@ function SessionPanel({
           </div>
         )}
         {events.map((event) => (
-          <EventCard key={event.id} event={event} />
+          <EventCard key={event.id} event={event} onConfirm={handleConfirm} />
         ))}
       </div>
     </div>
@@ -258,6 +328,14 @@ export function ExecutionsPage() {
   const [showComposer, setShowComposer] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Claude Managed Agents advanced features (all optional, sensible defaults).
+  const [outcomeEnabled, setOutcomeEnabled] = useState(false);
+  const [outcomeRubric, setOutcomeRubric] = useState("");
+  const [maxIterations, setMaxIterations] = useState(3);
+  const [precisionMode, setPrecisionMode] = useState(false); // always_ask on MCP
+  const [delegationMode, setDelegationMode] = useState(false); // spawn sub-agents
+  const [guardrailsEnabled, setGuardrailsEnabled] = useState(true);
+
   const auto = useMemo(() => analyzeDescription(description), [description]);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
@@ -281,16 +359,13 @@ export function ExecutionsPage() {
       const cfg = analyzeDescription(desc);
       const titleLine = desc.split("\n")[0]!.slice(0, 80);
 
-      // Claude Managed Agents parity: every workspace gets a default
-      // persistent memory store, auto-created on first launch and reused
-      // for every subsequent agent. Mirrors `memory_stores` + `resources[]`
-      // pattern from platform.claude.com/docs/managed-agents/memory.
+      // ── Claude Managed Agents parity ──────────────────────────────────
+      // 1. MEMORY: workspace-scoped persistent memory store (auto-provisioned
+      //    once, reused forever). See docs/managed-agents/memory.
       let memoryStoreId: string | null = null;
       try {
         const { data: stores } = await api.listMemoryStores();
-        const existing = stores.find(
-          (s) => s.name === "Workspace Default Memory"
-        );
+        const existing = stores.find((s) => s.name === "Workspace Default Memory");
         if (existing) {
           memoryStoreId = existing.id;
         } else {
@@ -305,6 +380,69 @@ export function ExecutionsPage() {
         console.warn("[memory] auto-provision failed:", e);
       }
 
+      // 2. VAULT: workspace-scoped credential store for MCP OAuth. Auto-
+      //    provisioned once and passed via session.vault_ids so Anthropic can
+      //    refresh OAuth tokens transparently. See docs/managed-agents/vaults.
+      let defaultVaultId: string | null = null;
+      try {
+        const { data: vaults } = await api.listVaults();
+        const existing = vaults.find(
+          (v) => v.display_name === "Workspace Default Vault",
+        );
+        if (existing) {
+          defaultVaultId = existing.id;
+        } else {
+          const created = await api.createVault({
+            display_name: "Workspace Default Vault",
+            metadata: {
+              purpose: "default_mcp_oauth",
+              external_user_id: wsId ?? "workspace",
+            },
+          });
+          defaultVaultId = created.id;
+        }
+      } catch (e) {
+        console.warn("[vault] auto-provision failed:", e);
+      }
+
+      // 3. SKILLS: auto-attach all workspace skills to the agent. Each skill
+      //    contributes metadata (~100 tokens) at load time and is fully loaded
+      //    on trigger-match. See docs/agent-skills/overview.
+      let workspaceSkillIds: string[] = [];
+      try {
+        const skills = await api.listSkills();
+        workspaceSkillIds = skills.map((s) => s.id);
+      } catch (e) {
+        console.warn("[skills] listing failed:", e);
+      }
+
+      // 4. GUARDRAILS: safety-by-default system-prompt additions aligned with
+      //    docs/test-and-evaluate/strengthen-guardrails/*.
+      const guardrails = guardrailsEnabled
+        ? [
+            "",
+            "SAFETY GUARDRAILS:",
+            "- If unsure or information is missing, say so explicitly instead of fabricating.",
+            "- Cite sources when making factual claims from web_fetch / web_search.",
+            "- Never execute destructive commands (rm -rf, DROP TABLE, force-push) without explicit user confirmation.",
+            "- Never expose, log, or transmit credentials, tokens, or secrets.",
+            "- Refuse requests for disallowed content; redirect to safe alternatives.",
+          ].join("\n")
+        : "";
+
+      const precisionHint = precisionMode
+        ? "\nPRECISION MODE: each MCP tool invocation will require user confirmation (always_ask policy). Plan efficiently — batch related steps."
+        : "";
+
+      const delegationHint = delegationMode
+        ? "\nDELEGATION MODE: you may delegate sub-tasks to specialist callable agents (reviewer, tester) using the multi-agent protocol."
+        : "";
+
+      const outcomeHint =
+        outcomeEnabled && outcomeRubric.trim()
+          ? `\nOUTCOME RUBRIC:\n${outcomeRubric.trim()}\nIterate up to ${maxIterations} times until the rubric is satisfied. Write final deliverables to /mnt/session/outputs/.`
+          : "";
+
       const systemPrompt = [
         "You are an autonomous AI agent running on the Aurion platform.",
         "Execute the user's task completely and autonomously without asking for confirmation.",
@@ -316,11 +454,56 @@ export function ExecutionsPage() {
         memoryStoreId
           ? `Persistent memory store attached: ${memoryStoreId}. Use memory_list/memory_search/memory_read before starting; memory_write durable learnings when done.`
           : "",
+        workspaceSkillIds.length > 0
+          ? `${workspaceSkillIds.length} workspace skill(s) attached. Consult their SKILL.md metadata and load on match.`
+          : "",
+        precisionHint,
+        delegationHint,
+        outcomeHint,
+        guardrails,
         "",
         "When the task is complete, provide a clear summary of what was done and what was found.",
       ]
         .filter(Boolean)
         .join("\n");
+
+      // 5. CALLABLE AGENTS: create specialist sub-agents the orchestrator can
+      //    delegate to. One level of delegation only, per docs/managed-agents/
+      //    multi-agent. We spin up two reusable reviewers scoped to the
+      //    workspace (idempotent — reused across sessions by name).
+      let callableAgentIds: string[] = [];
+      if (delegationMode) {
+        try {
+          const { data: existingAgents } = await api.listManagedAgents();
+          const findOrCreate = async (
+            name: string,
+            roleSystem: string,
+          ): Promise<string> => {
+            const found = existingAgents.find((a) => a.name === name);
+            if (found) return found.id;
+            const created = await api.createManagedAgent({
+              name,
+              description: `Specialist sub-agent: ${name}`,
+              model: { id: "anthropic/claude-haiku-4-5", speed: "fast" },
+              system_prompt: roleSystem,
+              tools: [{ type: "agent_toolset_20260401" }],
+              metadata: { source: "executions-delegation" },
+            });
+            return created.id;
+          };
+          const reviewerId = await findOrCreate(
+            "Delegation: Reviewer",
+            "You are a strict code/content reviewer. Verify correctness, security, and alignment with the requested outcome. Report issues tersely with file:line citations.",
+          );
+          const testerId = await findOrCreate(
+            "Delegation: Tester",
+            "You are a test-writer. Given a piece of code or a spec, produce runnable tests covering the critical paths and edge cases. Return test code only.",
+          );
+          callableAgentIds = [reviewerId, testerId];
+        } catch (e) {
+          console.warn("[delegation] sub-agent provisioning failed:", e);
+        }
+      }
 
       const agent = await api.createManagedAgent({
         name: `Chat: ${titleLine}`,
@@ -328,18 +511,33 @@ export function ExecutionsPage() {
         model: { id: cfg.model, speed: "standard" },
         system_prompt: systemPrompt,
         tools: [{ type: "agent_toolset_20260401" as const }],
+        callable_agents: callableAgentIds,
         metadata: {
           source: "chat-executions",
           auto_mcp_servers: cfg.mcpServers,
           auto_reasoning: cfg.reasoning,
           execution_mode: cfg.mode,
           memory_store_ids: memoryStoreId ? [memoryStoreId] : [],
+          default_vault_id: defaultVaultId,
+          skill_ids: workspaceSkillIds,
+          precision_mode: precisionMode,
+          delegation_mode: delegationMode,
+          guardrails_enabled: guardrailsEnabled,
+          outcome_enabled: outcomeEnabled,
+          outcome_max_iterations: outcomeEnabled ? maxIterations : null,
         },
       });
 
-      // Auto-attach suggested MCP servers from the registry.
-      // We try to match registry entries by slug/name against cfg.mcpServers.
-      // Fails silently per-connector so one missing registry entry doesn't block launch.
+      // Attach workspace skills (best-effort).
+      if (workspaceSkillIds.length > 0) {
+        try {
+          await api.setAgentSkills(agent.id, { skill_ids: workspaceSkillIds });
+        } catch (e) {
+          console.warn("[skills] attach failed:", e);
+        }
+      }
+
+      // 6. MCP auto-attach (registry lookup).
       if (cfg.mcpServers.length > 0) {
         try {
           const { data: registry } = await api.listMcpRegistry();
@@ -361,7 +559,7 @@ export function ExecutionsPage() {
               } catch (e) {
                 console.warn(`[auto-mcp] failed to attach ${server}:`, e);
               }
-            })
+            }),
           );
         } catch (e) {
           console.warn("[auto-mcp] registry lookup failed:", e);
@@ -374,7 +572,30 @@ export function ExecutionsPage() {
         source: "manual",
         model: cfg.model,
         execution_mode: cfg.mode,
+        vault_ids: defaultVaultId ? [defaultVaultId] : undefined,
       });
+
+      // 7. OUTCOME (research preview): send user.define_outcome so the backend
+      //    evaluator iterates until the rubric is satisfied or max_iterations
+      //    is reached. See docs/managed-agents/define-outcomes.
+      if (outcomeEnabled && outcomeRubric.trim() && session?.id) {
+        try {
+          await api.sendSessionEvents(session.id, {
+            events: [
+              {
+                type: "user.define_outcome",
+                content: {
+                  description: titleLine,
+                  rubric: outcomeRubric.trim(),
+                  max_iterations: maxIterations,
+                },
+              },
+            ],
+          });
+        } catch (e) {
+          console.warn("[outcome] define failed:", e);
+        }
+      }
 
       return session;
     },
@@ -539,6 +760,110 @@ export function ExecutionsPage() {
                 <div className="text-[11px] text-foreground/60">{auto.reasoning}</div>
               </div>
             )}
+
+            {/* Claude Managed Agents — advanced toggles */}
+            <div className="rounded-xl border border-foreground/15 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-foreground/60">
+                <Sparkles className="h-3 w-3" />
+                Claude advanced controls
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label className="flex items-start gap-2 rounded-lg border border-foreground/15 p-2.5 cursor-pointer hover:border-foreground/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-foreground"
+                    checked={guardrailsEnabled}
+                    onChange={(e) => setGuardrailsEnabled(e.target.checked)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <ShieldCheck className="h-3 w-3" />
+                      Safety guardrails
+                    </div>
+                    <div className="text-[11px] text-foreground/60">
+                      Harm screens, citation requirement, no destructive ops
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 rounded-lg border border-foreground/15 p-2.5 cursor-pointer hover:border-foreground/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-foreground"
+                    checked={precisionMode}
+                    onChange={(e) => setPrecisionMode(e.target.checked)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <BookOpen className="h-3 w-3" />
+                      Precision mode
+                    </div>
+                    <div className="text-[11px] text-foreground/60">
+                      Confirm each MCP call (always_ask policy)
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 rounded-lg border border-foreground/15 p-2.5 cursor-pointer hover:border-foreground/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-foreground"
+                    checked={delegationMode}
+                    onChange={(e) => setDelegationMode(e.target.checked)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <Users className="h-3 w-3" />
+                      Delegation mode
+                    </div>
+                    <div className="text-[11px] text-foreground/60">
+                      Spawn reviewer + tester callable sub-agents
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 rounded-lg border border-foreground/15 p-2.5 cursor-pointer hover:border-foreground/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 accent-foreground"
+                    checked={outcomeEnabled}
+                    onChange={(e) => setOutcomeEnabled(e.target.checked)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <Target className="h-3 w-3" />
+                      Outcome rubric
+                    </div>
+                    <div className="text-[11px] text-foreground/60">
+                      Iterate until rubric satisfied (max {maxIterations})
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {outcomeEnabled && (
+                <div className="space-y-2 pt-2 border-t border-foreground/10">
+                  <div className="text-[11px] text-foreground/60">
+                    Rubric (markdown) — evaluator checks each criterion before marking satisfied
+                  </div>
+                  <Textarea
+                    value={outcomeRubric}
+                    onChange={(e) => setOutcomeRubric(e.target.value)}
+                    placeholder={`# Success Criteria\n- [ ] All tests pass\n- [ ] No lint errors\n- [ ] Deliverable in /mnt/session/outputs/`}
+                    className="min-h-[100px] text-xs font-mono"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-foreground/60">Max iterations</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={20}
+                      value={maxIterations}
+                      onChange={(e) => setMaxIterations(Number(e.target.value))}
+                      className="flex-1 accent-foreground"
+                    />
+                    <span className="text-xs font-medium w-8 text-right">{maxIterations}</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-2">
               <div className="text-[11px] uppercase tracking-wider text-foreground/60">
