@@ -241,6 +241,11 @@ func (b *agenticCloudBackend) agenticLoop(
 		if err != nil {
 			finalStatus = "failed"
 			finalError = err.Error()
+			b.logger.Error("agentic loop: API call failed",
+				"turn", turn+1,
+				"model", model,
+				"error", err.Error(),
+			)
 			safeSend(ctx, msgCh, Message{Type: MessageError, Content: finalError})
 			goto done
 		}
