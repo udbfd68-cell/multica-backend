@@ -289,7 +289,7 @@ export function ExecutionsPage() {
       try {
         const { data: stores } = await api.listMemoryStores();
         const existing = stores.find(
-          (s) => s.name === "Workspace Default Memory" && !s.archived_at
+          (s) => s.name === "Workspace Default Memory"
         );
         if (existing) {
           memoryStoreId = existing.id;
